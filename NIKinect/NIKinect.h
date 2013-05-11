@@ -30,11 +30,11 @@ class __declspec(dllexport) NIKinect{
 		static const int _n_flags = 8;
 
 	public:
-		NIKinect(const char* file = 0);
+		NIKinect();
 		~NIKinect();
 
 		//Setup
-		bool init_generators(int generators = DEPTH_G + IMAGE_G + SCENE_A, const char* file = 0);
+		bool init(const char* file = 0, int generators = DEPTH_G + IMAGE_G + SCENE_A);
 		void set_min_depth(int milimeters);
 		void set_max_depth(int milimeters);
 

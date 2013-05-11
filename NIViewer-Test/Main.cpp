@@ -1,11 +1,12 @@
+
 #include <NIKinect.h>
 
 int main(int argc, char* argv[]){
 	NIKinect* kinect = new NIKinect();
-
+	kinect->init("C:\\Dev\\Kinect\\Data\\ONI\\mirror_papers.oni");
 	bool result = false;
 
-	result = kinect->init_generators();
+//	result = kinect->init_generators();
 
 	cv::Mat color;
 	cv::Mat depth;

@@ -17,7 +17,7 @@ const char* NIKinect::_sample_xml_path="C:\\Dev\\External\\OpenNI\\Data\\Samples
  *
  * @TODO	Init from ONI File
  */
-NIKinect::NIKinect(const char* file):
+NIKinect::NIKinect():
 	_min_depth(400),
 	_max_depth(5000),
 	_last_tick(0),
@@ -26,8 +26,6 @@ NIKinect::NIKinect(const char* file):
 	
 	for(int i = 0 ; i < (this->_n_flags * this->_n_flags + this->_n_flags) ; ++i)
 		this->_flags[i] = false;
-
-	//this->init_generators(3,file);
 }
 
 /** 
@@ -46,12 +44,16 @@ NIKinect::~NIKinect(){
  *
  * @TODO	Init from file_xml
  */
-bool NIKinect::init_generators(int generators, const char* file){
-	if(file){
+bool NIKinect::init(const char* file, int generators){
+	XnStatus rc;
 
+	rc = this->_context.Init();
+
+	if(file){
+		rc = this->_context.OpenFileRecording(file);
 	}
 	else{
-		this->_context.Init();
+		
 	}
 
 	int i;
@@ -102,8 +104,7 @@ bool NIKinect::init_generators(int generators, const char* file){
 		return false;
 	}
 	else{
-		XnStatus rc;
-
+		
 		_depth_generator.GetAlternativeViewPointCap().SetViewPoint(_image_generator);
 		rc = this->_context.StartGeneratingAll();
 				
