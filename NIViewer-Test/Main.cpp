@@ -14,6 +14,7 @@ int main(int argc, char* argv[]){
 	cv::Mat depthMat8UC1;
 	cv::Mat depth_as_color;
 
+	
 
 	char c = 0;
 	while((c = cv::waitKey(31)) != 27){
@@ -24,9 +25,18 @@ int main(int argc, char* argv[]){
 		//	imshow("Color",color);
 		//}
 
+		
+
 		if(kinect->get_depth(depth)){
-			//depth.convertTo(depthMat8UC1, CV_8UC1,0.05);
-			//imshow("Depth",depthMat8UC1);
+			depth.convertTo(depthMat8UC1, CV_8UC1,0.05);
+			imshow("Depth",depthMat8UC1);
+
+			if(c == ' '){
+				static int n = 1;
+				char buff[128];
+				sprintf(buff,"img_%02d.png",n++);
+				cv::imwrite(buff,depthMat8UC1);
+			}
 			//
 			//kinect->get_mask(mask);
 			//imshow("Mask",mask);
