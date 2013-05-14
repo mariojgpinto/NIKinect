@@ -76,6 +76,9 @@ class __declspec(dllexport) NIKinect{
 		bool get_range_color(cv::Mat &color, int min = -1, int max = -1);
 		//bool get_range_depth_as_color(cv::Mat &depth_as_color, int min = -1, int max = -1);
 
+		bool get_depth_meta_data(xn::DepthMetaData *depth);
+
+
 		double get_frame_rate();
 
 	private:

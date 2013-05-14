@@ -603,3 +603,14 @@ bool NIKinect::get_depth_as_color(cv::Mat &depth_as_color, int min, int max){
 		return false;
 	}
 }
+
+
+bool NIKinect::get_depth_meta_data(xn::DepthMetaData *depth){
+	if(this->_flags[NIKinect::DEPTH_G]){
+		depth = &this->_depth_md;
+		return true;
+	}
+	else{
+		return false;
+	}
+}
