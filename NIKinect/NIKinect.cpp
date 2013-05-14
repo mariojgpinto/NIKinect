@@ -105,7 +105,7 @@ bool NIKinect::init(const char* file, int generators){
 	}
 	else{
 		
-		_depth_generator.GetAlternativeViewPointCap().SetViewPoint(_image_generator);
+		rc = _depth_generator.GetAlternativeViewPointCap().SetViewPoint(_image_generator);
 		rc = this->_context.StartGeneratingAll();
 				
 		return (rc == XN_STATUS_OK);

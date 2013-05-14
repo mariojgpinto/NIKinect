@@ -3,7 +3,9 @@
 
 int main(int argc, char* argv[]){
 	NIKinect* kinect = new NIKinect();
-	kinect->init("C:\\Dev\\Kinect\\Data\\ONI\\mirror_papers.oni");
+	//kinect->init("C:\\Dev\\Kinect\\Data\\ONI\\mirror_papers.oni");
+	//kinect->init("C:\\Dev\\AAL4ALL\\ONI\\1user.oni");
+	kinect->init();
 	bool result = false;
 
 //	result = kinect->init_generators();
