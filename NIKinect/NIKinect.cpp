@@ -257,6 +257,10 @@ bool NIKinect::update(){
 		depthMat16UC1.copyTo(_depth_mat);
 
 		cv::inRange(depthMat16UC1,1,5000,_mask_mat);
+
+		double min = this->_min_depth;
+		double max = this->_max_depth;
+		NIKinect::compute_color_encoded_depth(this->_depth_mat,this->_depth_as_color_mat,&min,&max);
 	}
 
 	//Updates Image Variables
@@ -590,20 +594,28 @@ bool NIKinect::get_color(cv::Mat &color){
  * @retval	@c true if the cv::Mat was successfully created.
  * @retval	@c false if the generator is not active or some other error occurred.
  */
-bool NIKinect::get_depth_as_color(cv::Mat &depth_as_color, int min, int max){
+//bool NIKinect::get_depth_as_color(cv::Mat &depth_as_color, int min, int max){
+//	if(this->_flags[NIKinect::DEPTH_G]){
+//		double min_t = (min == -1) ? this->_min_depth : min;
+//		double max_t = (max == -1) ? this->_max_depth : max;
+//
+//		NIKinect::compute_color_encoded_depth(this->_depth_mat,depth_as_color,&min_t,&max_t);
+//
+//		return true;
+//	}
+//	else{
+//		return false;
+//	}
+//}
+bool NIKinect::get_depth_as_color(cv::Mat3b &depth_as_color){
 	if(this->_flags[NIKinect::DEPTH_G]){
-		double min_t = (min == -1) ? this->_min_depth : min;
-		double max_t = (max == -1) ? this->_max_depth : max;
-
-		NIKinect::compute_color_encoded_depth(this->_depth_mat,depth_as_color,&min_t,&max_t);
-
+		this->_depth_as_color_mat.copyTo(depth_as_color);
 		return true;
 	}
 	else{
 		return false;
 	}
 }
-
 
 bool NIKinect::get_depth_meta_data(xn::DepthMetaData *depth){
 	if(this->_flags[NIKinect::DEPTH_G]){

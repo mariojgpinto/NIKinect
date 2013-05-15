@@ -69,7 +69,8 @@ class __declspec(dllexport) NIKinect{
 		bool get_depth(cv::Mat &depth);
 		bool get_mask(cv::Mat &mask);
 		bool get_color(cv::Mat &color);
-		bool get_depth_as_color(cv::Mat &depth_as_color, int min = -1, int max = -1);
+		//bool get_depth_as_color(cv::Mat &depth_as_color, int min = -1, int max = -1);
+		bool get_depth_as_color(cv::Mat3b &depth_as_color);
 
 		bool get_range_depth(cv::Mat &depth, int min = -1, int max = -1);
 		bool get_range_mask(cv::Mat &mask, int min = -1, int max = -1);
@@ -80,7 +81,12 @@ class __declspec(dllexport) NIKinect{
 
 
 		double get_frame_rate();
+		xn::DepthMetaData _depth_md;
 
+
+		static void compute_color_encoded_depth(const cv::Mat1f& depth_im, cv::Mat& color_depth_im,
+                                     double* i_min_val, double* i_max_val);
+		
 	private:
 		bool init_from_xml_file(const char* file = 0);
 		void flag_re_check();
@@ -98,8 +104,6 @@ class __declspec(dllexport) NIKinect{
 		bool init_scene_analyzer();
 
 		void update_frame_rate();
-		static void compute_color_encoded_depth(const cv::Mat1f& depth_im, cv::Mat& color_depth_im,
-                                     double* i_min_val, double* i_max_val);
 		
 	private:
 		//Flags
@@ -122,7 +126,7 @@ class __declspec(dllexport) NIKinect{
 		xn::SceneAnalyzer _scene_analyzer;
 
 		//Meta Data
-		xn::DepthMetaData _depth_md;
+		
 		xn::ImageMetaData _image_md;
 		xn::IRMetaData _ir_md;
 		xn::AudioMetaData _audio_md;
@@ -135,6 +139,7 @@ class __declspec(dllexport) NIKinect{
 		cv::Mat _depth_mat;
 		cv::Mat _color_mat;
 		cv::Mat _mask_mat;
+		cv::Mat3b _depth_as_color_mat;
 
 
 		//Frame Rate
