@@ -105,7 +105,7 @@ bool NIKinect::init(const char* file, int generators){
 	}
 	else{
 		
-		rc = _depth_generator.GetAlternativeViewPointCap().SetViewPoint(_image_generator);
+		//rc = _depth_generator.GetAlternativeViewPointCap().SetViewPoint(_image_generator);
 		rc = this->_context.StartGeneratingAll();
 				
 		return (rc == XN_STATUS_OK);
@@ -283,7 +283,7 @@ bool NIKinect::update(){
  */
 void NIKinect::update_frame_rate(){
 	++this->_frame_counter;
-	if (this->_frame_counter == 10)
+	if (this->_frame_counter == 5)
 	{
 		double current_tick = cv::getTickCount();
 		this->_frame_rate = _frame_counter / ((current_tick - this->_last_tick)/cv::getTickFrequency());
@@ -617,9 +617,9 @@ bool NIKinect::get_depth_as_color(cv::Mat3b &depth_as_color){
 	}
 }
 
-bool NIKinect::get_depth_meta_data(xn::DepthMetaData *depth){
+bool NIKinect::get_depth_meta_data(xn::DepthMetaData& depth){
 	if(this->_flags[NIKinect::DEPTH_G]){
-		depth = &this->_depth_md;
+		depth.CopyFrom(this->_depth_md);
 		return true;
 	}
 	else{
