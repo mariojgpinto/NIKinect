@@ -26,6 +26,9 @@ NIKinect::NIKinect():
 	
 	for(int i = 0 ; i < (this->_n_flags * this->_n_flags + this->_n_flags) ; ++i)
 		this->_flags[i] = false;
+
+	for(int i = 0 ; i < (this->_n_processing * this->_n_processing + this->_n_processing) ; ++i)
+		this->_flags_processing[i] = false;
 }
 
 /** 
@@ -68,7 +71,7 @@ bool NIKinect::init(const char* file, int generators){
 	int ac = 0 ;
 
 	for (i = 0; i < this->_n_flags; ++i){
-		if(flags[i]){
+		if(flags[i] == '1'){
 			int power = pow(2.0,i);
 			switch(power){
 				case NIKinect::DEPTH_G:
@@ -134,6 +137,17 @@ void NIKinect::set_max_depth(int milimeters){
 	this->_max_depth = milimeters;
 }
 
+/** 
+ * @brief	Sets the Processing Flag's value to the given value (true or false).
+ *
+ * @param[in]	flag
+ *				Flag to be set the value
+ * @param[in]	value
+ *				Value to be set to the flag.
+ */
+void NIKinect::set_processing_flag(NIKinect::PROCESSING flag, bool value){
+	this->_flags_processing[flag] = value;
+}
 
 //-----------------------------------------------------------------------------
 // SETUP - INITIALIZE GENERATORS
@@ -156,13 +170,20 @@ bool NIKinect::init_depth_generator(){
 		{
 			printf("The Depth Node could not be created.%s\n",xnGetStatusString(rc));
 			this->_flags[NIKinect::DEPTH_G] = false;
+			this->_flags_processing[NIKinect::DEPTH_P] = false;
+			this->_flags_processing[NIKinect::MASK_P] = false;
+
 		}
 		else{
 			this->_flags[NIKinect::DEPTH_G] = true;
+			this->_flags_processing[NIKinect::DEPTH_P] = true;
+			this->_flags_processing[NIKinect::MASK_P] = true;
 		}
 	}
 	else{
 		this->_flags[NIKinect::DEPTH_G] = true;
+		this->_flags_processing[NIKinect::DEPTH_P] = true;
+		this->_flags_processing[NIKinect::MASK_P] = true;
 	}
 
 	return this->_flags[NIKinect::DEPTH_G];
@@ -186,13 +207,16 @@ bool NIKinect::init_image_generator(){
 		{
 			printf("The Image Node could not be created.%s\n",xnGetStatusString(rc));
 			this->_flags[NIKinect::IMAGE_G] = false;
+			this->_flags_processing[NIKinect::IMAGE_P] = false;
 		}
 		else{
 			this->_flags[NIKinect::IMAGE_G] = true;
+			this->_flags_processing[NIKinect::IMAGE_P] = true;
 		}
 	}
 	else{
 		this->_flags[NIKinect::IMAGE_G] = true;
+		this->_flags_processing[NIKinect::IMAGE_P] = true;
 	}
 
 	return this->_flags[NIKinect::IMAGE_G];
@@ -252,22 +276,35 @@ bool NIKinect::update(){
 
 	//Updates Depth Variables
 	if(this->_flags[NIKinect::DEPTH_G]){
-		this->_depth_generator.GetMetaData(_depth_md);
-		cv::Mat depthMat16UC1(480, 640,CV_16UC1, (void*) _depth_md.Data());
-		depthMat16UC1.copyTo(_depth_mat);
+		this->_depth_generator.GetMetaData(this->_depth_md);
 
-		cv::inRange(depthMat16UC1,1,5000,_mask_mat);
+		if(this->_flags_processing[NIKinect::DEPTH_P]){
+			cv::Mat depthMat16UC1(480, 640,CV_16UC1, (void*) this->_depth_md.Data());
+			depthMat16UC1.copyTo(this->_depth_mat);
+		}
 
-		double min = this->_min_depth;
-		double max = this->_max_depth;
-		NIKinect::compute_color_encoded_depth(this->_depth_mat,this->_depth_as_color_mat,&min,&max);
+		if(this->_flags_processing[NIKinect::DEPTH_P]){
+			//cv::threshold src uses 8-bit or 32-bit floating point so you have to convert before use. Loss of performance.
+			//depthMat16UC1.convertTo(mask8,CV_8UC1);
+			//cv::threshold(mask8,this->_mask_mat,0.1,255,CV_THRESH_BINARY);
+			cv::inRange(this->_depth_mat,1,10000,this->_mask_mat);
+		}
+
+		if(this->_flags_processing[NIKinect::DEPTH_COLOR]){
+			double min = this->_min_depth;
+			double max = this->_max_depth;
+			NIKinect::compute_color_encoded_depth(this->_depth_mat,this->_depth_as_color_mat,&min,&max);
+		}
 	}
 
 	//Updates Image Variables
 	if(this->_flags[NIKinect::IMAGE_G]){
 		this->_image_generator.GetMetaData(_image_md);
-		cv::Mat color_temp(480,640,CV_8UC3,(void*) _image_md.Data());
-		cv::cvtColor(color_temp,_color_mat,CV_RGB2BGR);
+
+		if(this->_flags_processing[NIKinect::IMAGE_P]){
+			cv::Mat color_temp(480,640,CV_8UC3,(void*) _image_md.Data());
+			cv::cvtColor(color_temp,_color_mat,CV_RGB2BGR);
+		}
 	}
 
 	if(this->_flags[NIKinect::SCENE_A]){
@@ -508,6 +545,34 @@ xn::SceneAnalyzer& NIKinect::get_scene_analyzer(){
 	return this->_scene_analyzer;
 }
 
+
+
+//-----------------------------------------------------------------------------
+// ACCESS - OPENCV MAT
+//-----------------------------------------------------------------------------
+
+/**
+ * @brief	Gets a copy of the Color cv::Mat.
+ * @details	Gets a copy of the Color cv::Mat, if the Image Generator 
+ *			(_image_generator) is active.
+ *
+ * @param[out]	color
+ *				Copy of the Image cv::Mat.
+ *
+ * @retval	@c true if the cv::Mat was successfully copied.
+ * @retval	@c false if the generator is not active or some other error occurred.
+ */
+bool NIKinect::get_depth_meta_data(xn::DepthMetaData& depth){
+	if(this->_flags[NIKinect::DEPTH_G]){
+		depth.CopyFrom(this->_depth_md);
+		return true;
+	}
+	else{
+		return false;
+	}
+}
+
+
 //-----------------------------------------------------------------------------
 // ACCESS - OPENCV MAT
 //-----------------------------------------------------------------------------
@@ -523,7 +588,7 @@ xn::SceneAnalyzer& NIKinect::get_scene_analyzer(){
  * @retval	@c false if the generator is not active or some other error occurred.
  */
 bool NIKinect::get_depth(cv::Mat &depth){
-	if(this->_flags[NIKinect::DEPTH_G]){
+	if(this->_flags[NIKinect::DEPTH_G] && this->_flags_processing[NIKinect::DEPTH_P]){
 		this->_depth_mat.copyTo(depth);
 		return true;
 	}
@@ -544,7 +609,7 @@ bool NIKinect::get_depth(cv::Mat &depth){
  * @retval	@c false if the generator is not active or some other error occurred.
  */
 bool NIKinect::get_mask(cv::Mat &mask){
-	if(this->_flags[NIKinect::DEPTH_G]){
+	if(this->_flags[NIKinect::DEPTH_G] && this->_flags_processing[NIKinect::MASK_P]){
 		this->_mask_mat.copyTo(mask);
 		return true;
 	}
@@ -565,7 +630,7 @@ bool NIKinect::get_mask(cv::Mat &mask){
  * @retval	@c false if the generator is not active or some other error occurred.
  */
 bool NIKinect::get_color(cv::Mat &color){
-	if(this->_flags[NIKinect::IMAGE_G]){
+	if(this->_flags[NIKinect::IMAGE_G && this->_flags_processing[NIKinect::IMAGE_P]]){
 		this->_color_mat.copyTo(color);
 		return true;
 	}
@@ -595,7 +660,7 @@ bool NIKinect::get_color(cv::Mat &color){
  * @retval	@c false if the generator is not active or some other error occurred.
  */
 //bool NIKinect::get_depth_as_color(cv::Mat &depth_as_color, int min, int max){
-//	if(this->_flags[NIKinect::DEPTH_G]){
+//	if(this->_flags[NIKinect::DEPTH_G] && this->_flags_processing[NIKinect::DEPTH_COLOR]){
 //		double min_t = (min == -1) ? this->_min_depth : min;
 //		double max_t = (max == -1) ? this->_max_depth : max;
 //
@@ -608,7 +673,7 @@ bool NIKinect::get_color(cv::Mat &color){
 //	}
 //}
 bool NIKinect::get_depth_as_color(cv::Mat3b &depth_as_color){
-	if(this->_flags[NIKinect::DEPTH_G]){
+	if(this->_flags[NIKinect::DEPTH_G] && this->_flags_processing[NIKinect::DEPTH_COLOR]){
 		this->_depth_as_color_mat.copyTo(depth_as_color);
 		return true;
 	}
@@ -617,12 +682,40 @@ bool NIKinect::get_depth_as_color(cv::Mat3b &depth_as_color){
 	}
 }
 
-bool NIKinect::get_depth_meta_data(xn::DepthMetaData& depth){
+
+/**
+ * @brief	, according to the given range. 
+ * @details	.
+ *			If the range is not given by the user, it will use the NIKinect default
+ *			values (_min_depth and _max_depth).
+ *
+ * @param[out]	mask
+ *				Colorized image of the Depth cv::Mat, according to the given range.
+ *
+ * @param[in]	min
+ *				Minimum depth (in milimeters).
+ *
+ * @param[in]	max
+ *				Maximum depth (in milimeters).
+ *
+ * @retval	@c true if the cv::Mat was successfully created.
+ * @retval	@c false if the generator is not active or some other error occurred.
+ */
+bool NIKinect::get_range_mask(cv::Mat &mask, int min, int max){
 	if(this->_flags[NIKinect::DEPTH_G]){
-		depth.CopyFrom(this->_depth_md);
+		int min_t = (min == -1) ? this->_min_depth : min;
+		int max_t = (max == -1) ? this->_max_depth : max;
+
+		cv::inRange(this->_depth_mat,min_t,max_t,mask);
+
 		return true;
 	}
 	else{
 		return false;
 	}
 }
+//
+//
+//bool get_range_depth(cv::Mat &depth, int min = -1, int max = -1);
+//
+//bool get_range_color(cv::Mat &color, int min = -1, int max = -1);

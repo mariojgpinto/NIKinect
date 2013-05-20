@@ -25,18 +25,28 @@ class __declspec(dllexport) NIKinect{
 			USER_G = 16,
 			GESTURE_G = 32,
 			HAND_G = 64,
-			SCENE_A = 128
+			SCENE_A = 128,
+			
 		};
 		static const int _n_flags = 8;
+
+		enum PROCESSING{
+			DEPTH_P = 1,
+			MASK_P = 2,
+			IMAGE_P  = 4,
+			DEPTH_COLOR = 8,
+		};
+		static const int _n_processing = 4;
 
 	public:
 		NIKinect();
 		~NIKinect();
 
 		//Setup
-		bool init(const char* file = 0, int generators = DEPTH_G + IMAGE_G + SCENE_A);
+		bool init(const char* file = 0, int generators = DEPTH_G + IMAGE_G);
 		void set_min_depth(int milimeters);
 		void set_max_depth(int milimeters);
+		void set_processing_flag(NIKinect::PROCESSING flag, bool value);
 
 		//Running
 		bool update();
@@ -65,6 +75,9 @@ class __declspec(dllexport) NIKinect{
 
 		xn::SceneAnalyzer& get_scene_analyzer();
 
+		//Access Meta Data
+		bool get_depth_meta_data(xn::DepthMetaData& depth);
+
 		//Access - Convert to OpenCV
 		bool get_depth(cv::Mat &depth);
 		bool get_mask(cv::Mat &mask);
@@ -77,9 +90,7 @@ class __declspec(dllexport) NIKinect{
 		bool get_range_color(cv::Mat &color, int min = -1, int max = -1);
 		//bool get_range_depth_as_color(cv::Mat &depth_as_color, int min = -1, int max = -1);
 
-		bool get_depth_meta_data(xn::DepthMetaData& depth);
-
-
+		
 		double get_frame_rate();
 
 		static void compute_color_encoded_depth(const cv::Mat1f& depth_im, cv::Mat& color_depth_im,
@@ -106,6 +117,7 @@ class __declspec(dllexport) NIKinect{
 	private:
 		//Flags
 		bool _flags[_n_flags * _n_flags + _n_flags + 1];
+		bool _flags_processing[_n_processing * _n_processing + _n_processing + 1];
 
 		//Context
 		xn::Context _context;
