@@ -14,7 +14,7 @@ int main(int argc, char* argv[]){
 	cv::Mat depth;
 	cv::Mat mask;
 	cv::Mat depthMat8UC1;
-	cv::Mat depth_as_color;
+	cv::Mat3b depth_as_color;
 
 	
 
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]){
 			//kinect->get_mask(mask);
 			//imshow("Mask",mask);
 		
-			kinect->get_depth_as_color(depth_as_color,500,2500);
+			kinect->get_depth_as_color(depth_as_color);//,500,2500);
 			cv::imshow("DepthAsColor",depth_as_color);
 			//cv::Mat masked_color;
 			//color.copyTo(masked_color,mask);
