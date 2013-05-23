@@ -78,7 +78,7 @@ bool NIKinect::init(const char* file, int generators){
 					ac += (this->init_depth_generator()) ? 0 : NIKinect::DEPTH_G;
 					break;
 				case NIKinect::IMAGE_G:
-					ac += (this->init_image_generator()) ? 0 : NIKinect::IMAGE_G;
+ 					ac += (this->init_image_generator()) ? 0 : NIKinect::IMAGE_G;
 					break;
 				//case NIKinect::IR_G:
 				//	ac += (this->init_ir_generator()) ? 0 : NIKinect::IR_G;
@@ -186,6 +186,10 @@ bool NIKinect::init_depth_generator(){
 		this->_flags_processing[NIKinect::MASK_P] = true;
 	}
 
+	if(this->_flags[NIKinect::DEPTH_G]){
+		this->_depth_generator.GetMetaData(this->_depth_md);
+	}
+
 	return this->_flags[NIKinect::DEPTH_G];
 }
 
@@ -217,6 +221,10 @@ bool NIKinect::init_image_generator(){
 	else{
 		this->_flags[NIKinect::IMAGE_G] = true;
 		this->_flags_processing[NIKinect::IMAGE_P] = true;
+	}
+
+	if(this->_flags[NIKinect::IMAGE_G]){
+		this->_image_generator.GetMetaData(this->_image_md);
 	}
 
 	return this->_flags[NIKinect::IMAGE_G];
