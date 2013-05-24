@@ -225,6 +225,7 @@ bool NIKinect::init_image_generator(){
 
 	if(this->_flags[NIKinect::IMAGE_G]){
 		this->_image_generator.GetMetaData(this->_image_md);
+		this->_depth_generator.GetAlternativeViewPointCap().SetViewPoint(this->_image_generator);
 	}
 
 	return this->_flags[NIKinect::IMAGE_G];
@@ -237,8 +238,8 @@ bool NIKinect::init_image_generator(){
  * @retval	@c false if some error occurred.
  */
 bool NIKinect::init_scene_analyzer(){
-	XnStatus rc;
-	rc = _context.FindExistingNode(XN_NODE_TYPE_SCENE,this->_scene_analyzer);
+	XnStatus rc = 1;
+	//rc = _context.FindExistingNode(XN_NODE_TYPE_SCENE,this->_scene_analyzer);
 	//If the generator was already created, don't create it again.
 	if (rc != XN_STATUS_OK)
 	{
@@ -255,6 +256,10 @@ bool NIKinect::init_scene_analyzer(){
 	}
 	else{
 		this->_flags[NIKinect::SCENE_A] = true;
+	}
+
+	if(this->_flags[NIKinect::SCENE_A]){
+		this->_scene_analyzer.GetMetaData(this->_scene_md);
 	}
 
 	return this->_flags[NIKinect::SCENE_A];

@@ -140,6 +140,7 @@ class __declspec(dllexport) NIKinect{
 		xn::ImageMetaData _image_md;
 		xn::IRMetaData _ir_md;
 		xn::AudioMetaData _audio_md;
+		xn::SceneMetaData _scene_md;
 
 		//Processing
 		int _min_depth;
