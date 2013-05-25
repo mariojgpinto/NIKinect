@@ -96,6 +96,8 @@ class __declspec(dllexport) NIKinect{
 		static void compute_color_encoded_depth(const cv::Mat1f& depth_im, cv::Mat& color_depth_im,
                                      double* i_min_val, double* i_max_val);
 		
+		bool init_scene_analyzer();
+
 	private:
 		bool init_from_xml_file(const char* file = 0);
 		void flag_re_check();
@@ -110,7 +112,7 @@ class __declspec(dllexport) NIKinect{
 		bool init_gesture_generator();
 		bool init_hand_generator();
 		
-		bool init_scene_analyzer();
+		//bool init_scene_analyzer();
 
 		void update_frame_rate();
 		

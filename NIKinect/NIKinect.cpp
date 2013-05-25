@@ -86,9 +86,9 @@ bool NIKinect::init(const char* file, int generators){
 				//case NIKinect::AUDIO_G:
 				//	ac += (this->init_audio_generator()) ? 0 : NIKinect::AUDIO_G;
 				//	break;
-				//case NIKinect::USER_G:
-				//	ac += (this->init_user_generator()) ? 0 : NIKinect::USER_G;
-				//	break;
+				case NIKinect::USER_G:
+					ac += (this->init_user_generator()) ? 0 : NIKinect::USER_G;
+					break;
 				//case NIKinect::GESTURE_G:
 				//	ac += (this->init_gesture_generator()) ? 0 : NIKinect::GESTURE_G;
 				//	break;
@@ -107,7 +107,6 @@ bool NIKinect::init(const char* file, int generators){
 		return false;
 	}
 	else{
-		
 		rc = _depth_generator.GetAlternativeViewPointCap().SetViewPoint(_image_generator);
 		rc = this->_context.StartGeneratingAll();
 				
@@ -224,7 +223,7 @@ bool NIKinect::init_image_generator(){
 	}
 
 	if(this->_flags[NIKinect::IMAGE_G]){
-		this->_image_generator.GetMetaData(this->_image_md);
+		this->_image_generator.GetMetaData(this->_image_md);		
 		this->_depth_generator.GetAlternativeViewPointCap().SetViewPoint(this->_image_generator);
 	}
 
@@ -263,6 +262,37 @@ bool NIKinect::init_scene_analyzer(){
 	}
 
 	return this->_flags[NIKinect::SCENE_A];
+}
+
+
+/**
+ * @brief	Initializes the User Generator(_user_generator).
+ *
+ * @retval	@c true if the User Generator was successfully created.
+ * @retval	@c false if some error occurred.
+ */
+bool NIKinect::init_user_generator(){
+	XnStatus rc = 1;
+	rc = _context.FindExistingNode(XN_NODE_TYPE_USER,this->_user_generator);
+	//If the generator was already created, don't create it again.
+	if (rc != XN_STATUS_OK)
+	{
+		rc = _user_generator.Create(_context);
+
+		if (rc != XN_STATUS_OK)
+		{
+			printf("The Scene Analyzer Node could not be created.%s\n",xnGetStatusString(rc));
+			this->_flags[NIKinect::USER_G] = false;
+		}
+		else{
+			this->_flags[NIKinect::USER_G] = true;
+		}
+	}
+	else{
+		this->_flags[NIKinect::USER_G] = true;
+	}
+
+	return this->_flags[NIKinect::USER_G];
 }
 
 //-----------------------------------------------------------------------------
