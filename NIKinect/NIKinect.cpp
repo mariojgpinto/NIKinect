@@ -29,6 +29,13 @@ NIKinect::NIKinect():
 
 	for(int i = 0 ; i < (this->_n_processing * this->_n_processing + this->_n_processing) ; ++i)
 		this->_flags_processing[i] = false;
+
+	this->_point_2d = (XnPoint3D *)malloc(sizeof(XnPoint3D) * XN_VGA_Y_RES * XN_VGA_X_RES); 
+	this->_point_3d = (XnPoint3D *)malloc(sizeof(XnPoint3D) * XN_VGA_Y_RES * XN_VGA_X_RES); 
+	
+	//this->_cloud_pcl.width = XN_VGA_Y_RES * XN_VGA_X_RES;
+	//this->_cloud_pcl.height = 1;
+	//this->_cloud_pcl.points.resize (this->_cloud_pcl.width * this->_cloud_pcl.height);
 }
 
 /** 
@@ -358,6 +365,52 @@ bool NIKinect::update(){
 //-----------------------------------------------------------------------------
 // PROCESSING
 //-----------------------------------------------------------------------------
+
+/**
+ * @brief	Generates the 3D point cloud of the scene.
+ * @details	
+ */
+void NIKinect::generate_point_cloud(){
+	for(int y=0; y<XN_VGA_Y_RES; y++) { 
+		for(int x=0; x<XN_VGA_X_RES; x++) { 
+			XnPoint3D point1;
+			point1.X = x; 
+			point1.Y = y; 
+			point1.Z = _depth_md[y * XN_VGA_X_RES + x]; 
+
+			this->_point_2d[y * XN_VGA_X_RES + x] = point1;
+		}
+	} 
+
+	_depth_generator.ConvertProjectiveToRealWorld(XN_VGA_Y_RES*XN_VGA_X_RES, this->_point_2d, this->_point_3d);
+}
+
+/**
+ * @brief		Converts a list of points from projective coordinates to real world coordinates.
+ * @details	
+ *
+ * @param[in]	count
+ *				Number of points to be converted.
+ * @param[in]	points_in
+ *				List of points to be converted.
+ * @param[out]	points_out
+ *				List of converted points.
+ *
+ * @retval		@c true if the points were successfully converted.
+ * @retval		@c false if the input was invalid or an error occurred.
+ */
+bool NIKinect::convert_to_realworld(int count, XnPoint3D* points_in, XnPoint3D* points_out){
+	if(count == 0) return true;
+	if(!points_in) return false;
+
+	if(!points_out) 
+		points_out = (XnPoint3D*)malloc(sizeof(XnPoint3D) * count);
+
+	XnStatus result = this->_depth_generator.ConvertProjectiveToRealWorld(count,points_in,points_out);
+
+	return result == XN_STATUS_OK;
+}
+
 /**
  * @brief	Updates the frame rate variables.
  */
@@ -365,7 +418,7 @@ void NIKinect::update_frame_rate(){
 	++this->_frame_counter;
 	if (this->_frame_counter == 5)
 	{
-		double current_tick = cv::getTickCount();
+		int64 current_tick = cv::getTickCount();
 		this->_frame_rate = _frame_counter / ((current_tick - this->_last_tick)/cv::getTickFrequency());
 		this->_last_tick = current_tick;
 		this->_frame_counter = 0;
@@ -727,13 +780,13 @@ bool NIKinect::get_depth_as_color(cv::Mat3b &depth_as_color){
 
 
 /**
- * @brief	, according to the given range. 
- * @details	.
+ * @brief	Gets the depth mask, according to the given range. 
+ * @details	Gets the depth mask, according to the given range. 
  *			If the range is not given by the user, it will use the NIKinect default
  *			values (_min_depth and _max_depth).
  *
  * @param[out]	mask
- *				Colorized image of the Depth cv::Mat, according to the given range.
+ *				Depth Mask, according to the given range.
  *
  * @param[in]	min
  *				Minimum depth (in milimeters).
@@ -757,8 +810,45 @@ bool NIKinect::get_range_mask(cv::Mat &mask, int min, int max){
 		return false;
 	}
 }
-//
-//
-//bool get_range_depth(cv::Mat &depth, int min = -1, int max = -1);
+
+/**
+ * @brief	Gets the depth cv::Mat, according to the given range. 
+ * @details	Gets the depth cv::Mat, according to the given range. 
+ *			If the range is not given by the user, it will use the NIKinect default
+ *			values (_min_depth and _max_depth).
+ *
+ * @param[out]	mask
+ *				Depth cv::Mat, according to the given range.
+ *
+ * @param[in]	min
+ *				Minimum depth (in milimeters).
+ *
+ * @param[in]	max
+ *				Maximum depth (in milimeters).
+ *
+ * @retval	@c true if the cv::Mat was successfully created.
+ * @retval	@c false if the generator is not active or some other error occurred.
+ */
+bool NIKinect::get_range_depth(cv::Mat &depth, int min, int max){
+	if(this->_flags[NIKinect::DEPTH_G]){
+		int min_t = (min == -1) ? this->_min_depth : min;
+		int max_t = (max == -1) ? this->_max_depth : max;
+
+		cv::Mat mask;
+		cv::inRange(this->_depth_mat,min_t,max_t,mask);
+
+		this->_depth_mat.copyTo(depth,mask);
+
+		return true;
+	}
+	else{
+		return false;
+	}
+}
 //
 //bool get_range_color(cv::Mat &color, int min = -1, int max = -1);
+
+
+XnPoint3D* NIKinect::get_points_3d(){
+	return (this->_flags_processing[NIKinect::POINT_CLOUD]) ? this->_point_3d : NULL;
+}

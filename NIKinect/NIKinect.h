@@ -35,6 +35,7 @@ class __declspec(dllexport) NIKinect{
 			MASK_P = 2,
 			IMAGE_P  = 4,
 			DEPTH_COLOR = 8,
+			POINT_CLOUD = 16,
 		};
 		static const int _n_processing = 4;
 
@@ -55,6 +56,9 @@ class __declspec(dllexport) NIKinect{
 		bool get_floor_plane(double *a, double *b, double *c, double *d);
 		//void remove_plane(cv::Mat& mask, double a, double b, double c, double d);
 
+		//3D
+		bool convert_to_realworld(int count, XnPoint3D* points_in, XnPoint3D* points_out);
+		bool convert_to_realworld(cv::Mat mask, XnPoint3D* points_out);
 
 		//Access
 		bool check_flag(NIKinect::FLAGS flag);
@@ -90,19 +94,21 @@ class __declspec(dllexport) NIKinect{
 		bool get_range_color(cv::Mat &color, int min = -1, int max = -1);
 		//bool get_range_depth_as_color(cv::Mat &depth_as_color, int min = -1, int max = -1);
 
+		//Access 3D
+		XnPoint3D* get_points_3d();
+
 		
 		double get_frame_rate();
 
 		static void compute_color_encoded_depth(const cv::Mat1f& depth_im, cv::Mat& color_depth_im,
                                      double* i_min_val, double* i_max_val);
 		
-		bool init_scene_analyzer();
+		
 
 	private:
 		bool init_from_xml_file(const char* file = 0);
 		void flag_re_check();
 
-		//void init_from_xml_file(const char* file = 0);
 		bool init_depth_generator();
 		bool init_image_generator();
 		bool init_ir_generator();
@@ -112,7 +118,9 @@ class __declspec(dllexport) NIKinect{
 		bool init_gesture_generator();
 		bool init_hand_generator();
 		
-		//bool init_scene_analyzer();
+		bool init_scene_analyzer();
+
+		void generate_point_cloud();
 
 		void update_frame_rate();
 		
@@ -154,6 +162,10 @@ class __declspec(dllexport) NIKinect{
 		cv::Mat _mask_mat;
 		cv::Mat3b _depth_as_color_mat;
 
+		//Real World Coordinates?
+		XnPoint3D * _point_2d;
+		XnPoint3D * _point_3d;
+		//pcl::PointCloud<pcl::PointXYZ> _cloud_pcl;
 
 		//Frame Rate
 		double _last_tick;
