@@ -37,7 +37,7 @@ class __declspec(dllexport) NIKinect{
 			DEPTH_COLOR = 8,
 			POINT_CLOUD = 16,
 		};
-		static const int _n_processing = 4;
+		static const int _n_processing = 5;
 
 	public:
 		NIKinect();
@@ -58,7 +58,10 @@ class __declspec(dllexport) NIKinect{
 
 		//3D
 		bool convert_to_realworld(int count, XnPoint3D* points_in, XnPoint3D* points_out);
-		bool convert_to_realworld(cv::Mat mask, XnPoint3D* points_out);
+		bool convert_to_realworld(cv::Mat mask, XnPoint3D* points_out, int min_x = -1, int max_x = -1, int min_y = -1, int max_y = -1);
+		//bool convert_to_realworld(cv::Mat mask, XnPoint3D* points_out);
+
+		void set_3d_analysis_step(int step);
 
 		//Access
 		bool check_flag(NIKinect::FLAGS flag);
@@ -96,7 +99,7 @@ class __declspec(dllexport) NIKinect{
 
 		//Access 3D
 		XnPoint3D* get_points_3d();
-
+		int get_3d_analysis_step();
 		
 		double get_frame_rate();
 
@@ -163,6 +166,7 @@ class __declspec(dllexport) NIKinect{
 		cv::Mat3b _depth_as_color_mat;
 
 		//Real World Coordinates?
+		int _point_step;
 		XnPoint3D * _point_2d;
 		XnPoint3D * _point_3d;
 		//pcl::PointCloud<pcl::PointXYZ> _cloud_pcl;

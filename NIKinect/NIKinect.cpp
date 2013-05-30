@@ -22,7 +22,8 @@ NIKinect::NIKinect():
 	_max_depth(5000),
 	_last_tick(0),
 	_frame_counter(0),
-	_frame_rate(0) {
+	_frame_rate(0),
+	_point_step(2) {
 	
 	for(int i = 0 ; i < (this->_n_flags * this->_n_flags + this->_n_flags) ; ++i)
 		this->_flags[i] = false;
@@ -124,7 +125,7 @@ bool NIKinect::init(const char* file, int generators){
 }
 
 /** 
- * @brief	Sets the minimum value for the Depth Range.
+ * @brief		Sets the minimum value for the Depth Range.
  *
  * @param[in]	milimeters
  *				Minimum value for the Depth Range in milimeters.
@@ -153,6 +154,16 @@ void NIKinect::set_max_depth(int milimeters){
  */
 void NIKinect::set_processing_flag(NIKinect::PROCESSING flag, bool value){
 	this->_flags_processing[flag] = value;
+}
+
+/** 
+ * @brief		Sets the step value for the analysis of the Depth image to 3D point generation.
+ *
+ * @param[in]	step
+ *				Value of the analysis step.
+ */
+void NIKinect::set_3d_analysis_step(int step){
+	this->_point_step = step;
 }
 
 //-----------------------------------------------------------------------------
@@ -360,6 +371,12 @@ bool NIKinect::update(){
 	if(this->_flags[NIKinect::SCENE_A]){
 		
 	}
+
+	if(this->_flags_processing[NIKinect::POINT_CLOUD]){
+		this->generate_point_cloud();
+	}
+
+	return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -371,18 +388,20 @@ bool NIKinect::update(){
  * @details	
  */
 void NIKinect::generate_point_cloud(){
-	for(int y=0; y<XN_VGA_Y_RES; y++) { 
-		for(int x=0; x<XN_VGA_X_RES; x++) { 
+	int ac = 0;
+	for(int y=0; y<XN_VGA_Y_RES; y+=_point_step) { 
+		for(int x=0; x<XN_VGA_X_RES; x+=_point_step) { 
 			XnPoint3D point1;
 			point1.X = x; 
 			point1.Y = y; 
 			point1.Z = _depth_md[y * XN_VGA_X_RES + x]; 
 
-			this->_point_2d[y * XN_VGA_X_RES + x] = point1;
+			//this->_point_2d[y * XN_VGA_X_RES + x] = point1;
+			this->_point_2d[ac++] = point1;
 		}
 	} 
-
-	_depth_generator.ConvertProjectiveToRealWorld(XN_VGA_Y_RES*XN_VGA_X_RES, this->_point_2d, this->_point_3d);
+	//int n = ;
+	_depth_generator.ConvertProjectiveToRealWorld((XN_VGA_Y_RES*XN_VGA_X_RES) / (float)(_point_step*_point_step), this->_point_2d, this->_point_3d);
 }
 
 /**
@@ -407,6 +426,65 @@ bool NIKinect::convert_to_realworld(int count, XnPoint3D* points_in, XnPoint3D* 
 		points_out = (XnPoint3D*)malloc(sizeof(XnPoint3D) * count);
 
 	XnStatus result = this->_depth_generator.ConvertProjectiveToRealWorld(count,points_in,points_out);
+
+	return result == XN_STATUS_OK;
+}
+
+/**
+ * @brief		Converts a list of points from projective coordinates to real world coordinates.
+ * @details	
+ *
+ * @param[in]	Mask
+ *				.
+ * @param[out]	points_out
+ *				.
+ * @param[in]	min_x
+ *				.
+ * @param[in]	max_x
+ *				.
+ * @param[in]	min_y
+ *				.
+ * @param[in]	max_y
+ *				.
+ *
+ * @retval		@c true if the points were successfully converted.
+ * @retval		@c false if the input was invalid or an error occurred.
+ */
+bool NIKinect::convert_to_realworld(cv::Mat mask, XnPoint3D* points_out, int min_x, int max_x, int min_y, int max_y){
+	if(mask.size().width != this->_depth_mat.size().width || mask.size().height != this->_depth_mat.size().height || mask.type() != CV_8UC1) return false;
+
+	int _min_x,_max_x,_min_y,_max_y;
+
+	if(min_x >= -1 && min_x >= -1 && min_x >= -1 && min_x >= -1){
+		_min_x = min_x; _max_x = max_x; _min_y = min_y; _max_y = max_y;
+	}
+	else{
+		_min_x = 0; _max_x = mask.cols; _min_y = 0; _max_y = mask.rows;
+	}
+
+	int total_points = (_max_x - _min_x) * (_max_y - _min_y);
+	XnPoint3D* points_in = (XnPoint3D*)malloc(sizeof(XnPoint3D) * total_points);
+	
+	if(points_out == NULL) points_out = (XnPoint3D*)malloc(sizeof(XnPoint3D) * total_points);
+
+	uchar* ptr_mask = mask.data;
+	int mask_step = mask.cols;
+	int n_points = 0;
+	for(int x = _min_x; x < _max_x ; x+=_point_step){
+		for(int y = _min_y ; y < _max_y ; y+=_point_step){
+			if(ptr_mask[y * mask_step + x]){
+				XnPoint3D point1;
+				point1.X = x; 
+				point1.Y = y; 
+				point1.Z = this->_depth_md[y * mask_step + x]; 
+
+				points_in[n_points] = point1;
+				n_points++;
+			}
+		}
+	}
+
+	XnStatus result = this->_depth_generator.ConvertProjectiveToRealWorld(n_points,points_in,points_out);
 
 	return result == XN_STATUS_OK;
 }
@@ -851,4 +929,8 @@ bool NIKinect::get_range_depth(cv::Mat &depth, int min, int max){
 
 XnPoint3D* NIKinect::get_points_3d(){
 	return (this->_flags_processing[NIKinect::POINT_CLOUD]) ? this->_point_3d : NULL;
+}
+
+int NIKinect::get_3d_analysis_step(){
+	return this->_point_step;
 }
