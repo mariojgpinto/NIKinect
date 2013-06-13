@@ -3,9 +3,17 @@
 
 int main(int argc, char* argv[]){
 	NIKinect* kinect = new NIKinect();
+
+	if(argc == 2){
+		kinect->init(argv[1]);
+	}
+	else{
+		kinect->init();
+	}
+
 	//kinect->init("C:\\Dev\\Kinect\\Data\\ONI\\mirror_papers.oni");
-	//kinect->init("C:\\Dev\\AAL4ALL\\ONI\\1user.oni");
-	kinect->init();
+	//kinect->init("C:\\Dev\\Walkys\\Project\\Data\\foot_2_front.oni");
+	//kinect->init();
 	bool result = false;
 
 //	result = kinect->init_generators();

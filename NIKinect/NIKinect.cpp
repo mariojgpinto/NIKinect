@@ -1,21 +1,24 @@
 /** 
- * @file NIKinect.cpp 
- * @author Mario Pinto (mario.pinto@ccg.pt) 
- * @date May, 2013 
- * @brief Implementation of the NIKinect Class.
+ * @file	NIKinect.cpp 
+ * @author	Mario Pinto (mario.pinto@ccg.pt) 
+ * @date	May, 2013 
+ * @brief	Implementation of the NIKinect Class.
+ *
+ * @details	Deailed Information.
  */
 #include "NIKinect.h"
 
-const char* NIKinect::_sample_xml_path="C:\\Dev\\External\\OpenNI\\Data\\SamplesConfig.xml";
+//const char* NIKinect::_sample_xml_path="C:\\Dev\\External\\OpenNI\\Data\\SamplesConfig.xml";
 
 //-----------------------------------------------------------------------------
 // CONSTRUCTORS
 //-----------------------------------------------------------------------------
+
 /**
  * @brief	NIKinect Constructor.
  * @details	This constructor 
  *
- * @TODO	Init from ONI File
+ * @todo	Init from ONI File
  */
 NIKinect::NIKinect():
 	_min_depth(400),
@@ -51,9 +54,9 @@ NIKinect::~NIKinect(){
 // SETUP
 //-----------------------------------------------------------------------------
 /** 
- * @brief	NIKinect destructor.
+ * @brief	NIKinect Initializer.
  *
- * @TODO	Init from file_xml
+ * @todo	Init from file_xml
  */
 bool NIKinect::init(const char* file, int generators){
 	XnStatus rc;
@@ -172,8 +175,8 @@ void NIKinect::set_3d_analysis_step(int step){
 /**
  * @brief	Initializes the Depth Generator (_depth_generator).
  *
- * @retval	@c true if the generator was successfully created.
- * @retval	@c false if some error occurred.
+ * @retval	true if the generator was successfully created.
+ * @retval	false if some error occurred.
  */
 bool NIKinect::init_depth_generator(){
 	XnStatus rc;
@@ -213,8 +216,8 @@ bool NIKinect::init_depth_generator(){
 /**
  * @brief	Initializes the Image Generator (_image_generator).
  *
- * @retval	@c true if the generator was successfully created.
- * @retval	@c false if some error occurred.
+ * @retval	true if the generator was successfully created.
+ * @retval	false if some error occurred.
  */
 bool NIKinect::init_image_generator(){
 	XnStatus rc;
@@ -251,8 +254,8 @@ bool NIKinect::init_image_generator(){
 /**
  * @brief	Initializes the Scene Analyzer (_scene_analyzer).
  *
- * @retval	@c true if the Scene Analyzer was successfully created.
- * @retval	@c false if some error occurred.
+ * @retval	true if the Scene Analyzer was successfully created.
+ * @retval	false if some error occurred.
  */
 bool NIKinect::init_scene_analyzer(){
 	XnStatus rc = 1;
@@ -286,8 +289,8 @@ bool NIKinect::init_scene_analyzer(){
 /**
  * @brief	Initializes the User Generator(_user_generator).
  *
- * @retval	@c true if the User Generator was successfully created.
- * @retval	@c false if some error occurred.
+ * @retval	true if the User Generator was successfully created.
+ * @retval	false if some error occurred.
  */
 bool NIKinect::init_user_generator(){
 	XnStatus rc = 1;
@@ -318,15 +321,13 @@ bool NIKinect::init_user_generator(){
 //-----------------------------------------------------------------------------
 /**
  * @brief	Updates the generator's information.
- * @details	.
+ * @details	Use it in single-threaded applications.
  *
- * @TODO	Implement Other Generators and SceneAnalyzer update.
+ * @todo	Implement Other Generators and SceneAnalyzer update.
  */
 bool NIKinect::update(){
 	XnStatus rc;
 	rc = _context.WaitAnyUpdateAll();
-
-	this->update_frame_rate();
 
 	if (rc != XN_STATUS_OK)
 	{
@@ -376,12 +377,85 @@ bool NIKinect::update(){
 		this->generate_point_cloud();
 	}
 
+	this->update_frame_rate();
+
 	return true;
 }
 
+/*
+ * @brief	Updates the generator's information.
+ * @details	Used in threaded applications. Used in the \sa run method.
+ *
+ * @TODO	Implement Other Generators and SceneAnalyzer update.
+ */
+bool NIKinect::update_threaded(){
+	XnStatus rc;
+
+	//Updates Depth Variables
+	if(this->_flags[NIKinect::DEPTH_G]){
+		this->_depth_generator.GetMetaData(this->_depth_md);
+
+		if(this->_flags_processing[NIKinect::DEPTH_P]){
+			cv::Mat depthMat16UC1(480, 640,CV_16UC1, (void*) this->_depth_md.Data());
+			depthMat16UC1.copyTo(this->_depth_mat);
+		}
+
+		if(this->_flags_processing[NIKinect::DEPTH_P]){
+			//cv::threshold src uses 8-bit or 32-bit floating point so you have to convert before use. Loss of performance.
+			//depthMat16UC1.convertTo(mask8,CV_8UC1);
+			//cv::threshold(mask8,this->_mask_mat,0.1,255,CV_THRESH_BINARY);
+			cv::inRange(this->_depth_mat,1,10000,this->_mask_mat);
+		}
+
+		if(this->_flags_processing[NIKinect::DEPTH_COLOR]){
+			double min = this->_min_depth;
+			double max = this->_max_depth;
+			NIKinect::compute_color_encoded_depth(this->_depth_mat,this->_depth_as_color_mat,&min,&max);
+		}
+	}
+
+	//Updates Image Variables
+	if(this->_flags[NIKinect::IMAGE_G]){
+		this->_image_generator.GetMetaData(_image_md);
+
+		if(this->_flags_processing[NIKinect::IMAGE_P]){
+			cv::Mat color_temp(480,640,CV_8UC3,(void*) _image_md.Data());
+			cv::cvtColor(color_temp,_color_mat,CV_RGB2BGR);
+		}
+	}
+
+	if(this->_flags[NIKinect::SCENE_A]){
+		
+	}
+
+	if(this->_flags_processing[NIKinect::POINT_CLOUD]){
+		this->generate_point_cloud();
+	}
+
+	this->update_frame_rate();
+
+	return true;
+}
+
+/*
+ * @brief	.
+ * @details	.
+ *
+ */
 void NIKinect::run(){
-	while(true){
-		this->update();
+	XnStatus rc;
+	this->_running = true;
+
+	while(this->_running){
+		rc = _context.WaitAnyUpdateAll();
+		if (rc != XN_STATUS_OK){
+			printf("Read failed: %s\n", xnGetStatusString(rc));
+			return;
+		}
+
+		_mutex.lock();
+		this->update_threaded();
+		_mutex.unlock();
 	}
 }
 
@@ -421,8 +495,8 @@ void NIKinect::generate_point_cloud(){
  * @param[out]	points_out
  *				List of converted points.
  *
- * @retval		@c true if the points were successfully converted.
- * @retval		@c false if the input was invalid or an error occurred.
+ * @retval		true if the points were successfully converted.
+ * @retval		false if the input was invalid or an error occurred.
  */
 bool NIKinect::convert_to_realworld(int count, XnPoint3D* points_in, XnPoint3D* points_out){
 	if(count == 0) return true;
@@ -440,21 +514,21 @@ bool NIKinect::convert_to_realworld(int count, XnPoint3D* points_in, XnPoint3D* 
  * @brief		Converts a list of points from projective coordinates to real world coordinates.
  * @details	
  *
- * @param[in]	Mask
- *				.
+ * @param[in]	mask
+ *				Mask to filter the Depth Map.
  * @param[out]	points_out
- *				.
+ *				List with the converted points in realworld 3D Coordinates.
  * @param[in]	min_x
- *				.
+ *				Minimum X value of the mask.
  * @param[in]	max_x
- *				.
+ *				Maximum X value of the mask.
  * @param[in]	min_y
- *				.
+ *				Minimum Y value of the mask.
  * @param[in]	max_y
- *				.
+ *				Maximum Y value of the mask.
  *
- * @retval		@c true if the points were successfully converted.
- * @retval		@c false if the input was invalid or an error occurred.
+ * @retval		true if the points were successfully converted.
+ * @retval		false if the input was invalid or an error occurred.
  */
 bool NIKinect::convert_to_realworld(cv::Mat mask, XnPoint3D* points_out, int min_x, int max_x, int min_y, int max_y){
 	if(mask.size().width != this->_depth_mat.size().width || mask.size().height != this->_depth_mat.size().height || mask.type() != CV_8UC1) return false;
@@ -579,8 +653,8 @@ void NIKinect::compute_color_encoded_depth(const cv::Mat1f& depth_im, cv::Mat& c
  * @param[out]	d
  *				'd' value of the plane equation.
  *
- * @retval	@c true if the cv::Mat was successfully copied.
- * @retval	@c false if the generator is not active or some other error occurred.
+ * @retval	true if the cv::Mat was successfully copied.
+ * @retval	false if the generator is not active or some other error occurred.
  */
 bool NIKinect::get_floor_plane(double *a, double *b, double *c, double *d){
 	if(this->_flags[NIKinect::SCENE_A]){
@@ -608,7 +682,7 @@ bool NIKinect::get_floor_plane(double *a, double *b, double *c, double *d){
 	}
 }
 
-/**
+/*
  * @brief	Calculates the Floor Plane, if possible.
  *
  * @param[out]	mask
@@ -736,11 +810,11 @@ xn::SceneAnalyzer& NIKinect::get_scene_analyzer(){
  * @details	Gets a copy of the Color cv::Mat, if the Image Generator 
  *			(_image_generator) is active.
  *
- * @param[out]	color
+ * @param[out]	depth
  *				Copy of the Image cv::Mat.
  *
- * @retval	@c true if the cv::Mat was successfully copied.
- * @retval	@c false if the generator is not active or some other error occurred.
+ * @retval	true if the cv::Mat was successfully copied.
+ * @retval	false if the generator is not active or some other error occurred.
  */
 bool NIKinect::get_depth_meta_data(xn::DepthMetaData& depth){
 	if(this->_flags[NIKinect::DEPTH_G]){
@@ -764,8 +838,8 @@ bool NIKinect::get_depth_meta_data(xn::DepthMetaData& depth){
  * @param[out]	depth
  *				Copy of the Depth cv::Mat.
  *
- * @retval	@c true if the cv::Mat was successfully copied.
- * @retval	@c false if the generator is not active or some other error occurred.
+ * @retval	true if the cv::Mat was successfully copied.
+ * @retval	false if the generator is not active or some other error occurred.
  */
 bool NIKinect::get_depth(cv::Mat &depth){
 	if(this->_flags[NIKinect::DEPTH_G] && this->_flags_processing[NIKinect::DEPTH_P]){
@@ -785,8 +859,8 @@ bool NIKinect::get_depth(cv::Mat &depth){
  * @param[out]	mask
  *				Copy of the Mask cv::Mat.
  *
- * @retval	@c true if the cv::Mat was successfully copied.
- * @retval	@c false if the generator is not active or some other error occurred.
+ * @retval	true if the cv::Mat was successfully copied.
+ * @retval	false if the generator is not active or some other error occurred.
  */
 bool NIKinect::get_mask(cv::Mat &mask){
 	if(this->_flags[NIKinect::DEPTH_G] && this->_flags_processing[NIKinect::MASK_P]){
@@ -806,8 +880,8 @@ bool NIKinect::get_mask(cv::Mat &mask){
  * @param[out]	color
  *				Copy of the Image cv::Mat.
  *
- * @retval	@c true if the cv::Mat was successfully copied.
- * @retval	@c false if the generator is not active or some other error occurred.
+ * @retval	true if the cv::Mat was successfully copied.
+ * @retval	false if the generator is not active or some other error occurred.
  */
 bool NIKinect::get_color(cv::Mat &color){
 	if(this->_flags[NIKinect::IMAGE_G && this->_flags_processing[NIKinect::IMAGE_P]]){
@@ -819,10 +893,9 @@ bool NIKinect::get_color(cv::Mat &color){
 	}
 }
 
-/**
+/*
  * @brief	Gets a colorized image of the Depth cv::Mat, according to the given range. 
- * @details	Gets a colorized image of the Depth cv::Mat, according to the given range,
- *			if the Depth Generator (_depth_generator) is active.
+ * @details	if the Depth Generator (_depth_generator) is active.
  *			If the range is not given by the user, it will use the NIKinect default
  *			values (_min_depth and _max_depth).
  *			@see compute_color_encoded_depth.
@@ -836,8 +909,8 @@ bool NIKinect::get_color(cv::Mat &color){
  * @param[in]	max
  *				Maximum depth (in milimeters).
  *
- * @retval	@c true if the cv::Mat was successfully created.
- * @retval	@c false if the generator is not active or some other error occurred.
+ * @retval	true if the cv::Mat was successfully created.
+ * @retval	false if the generator is not active or some other error occurred.
  */
 //bool NIKinect::get_depth_as_color(cv::Mat &depth_as_color, int min, int max){
 //	if(this->_flags[NIKinect::DEPTH_G] && this->_flags_processing[NIKinect::DEPTH_COLOR]){
@@ -850,8 +923,20 @@ bool NIKinect::get_color(cv::Mat &color){
 //	}
 //	else{
 //		return false;
-//	}
+//	}@link DEPTH_G \endlink
 //}
+/**
+ * @brief	Gets a colorized image of the Depth cv::Mat, according to the NIKinect's range. 
+ * @details	The #DEPTH_G Generation Flag and the DEPTH_COLOR Processing flag must be active.
+ *			The used range is set by the _min_depth and _max_depth values.
+ *			@see compute_color_encoded_depth.
+ *
+ * @param[out]	depth_as_color
+ *				Colorized image of the Depth cv::Mat, according to the given range.
+ *
+ * @retval	true if the cv::Mat was successfully created.
+ * @retval	false if the generator is not active or some other error occurred.
+ */
 bool NIKinect::get_depth_as_color(cv::Mat3b &depth_as_color){
 	if(this->_flags[NIKinect::DEPTH_G] && this->_flags_processing[NIKinect::DEPTH_COLOR]){
 		this->_depth_as_color_mat.copyTo(depth_as_color);
@@ -878,8 +963,8 @@ bool NIKinect::get_depth_as_color(cv::Mat3b &depth_as_color){
  * @param[in]	max
  *				Maximum depth (in milimeters).
  *
- * @retval	@c true if the cv::Mat was successfully created.
- * @retval	@c false if the generator is not active or some other error occurred.
+ * @retval	true if the cv::Mat was successfully created.
+ * @retval	false if the generator is not active or some other error occurred.
  */
 bool NIKinect::get_range_mask(cv::Mat &mask, int min, int max){
 	if(this->_flags[NIKinect::DEPTH_G]){
@@ -897,11 +982,10 @@ bool NIKinect::get_range_mask(cv::Mat &mask, int min, int max){
 
 /**
  * @brief	Gets the depth cv::Mat, according to the given range. 
- * @details	Gets the depth cv::Mat, according to the given range. 
- *			If the range is not given by the user, it will use the NIKinect default
+ * @details	If the range is not given by the user, it will use the NIKinect default
  *			values (_min_depth and _max_depth).
  *
- * @param[out]	mask
+ * @param[out]	depth
  *				Depth cv::Mat, according to the given range.
  *
  * @param[in]	min
@@ -910,8 +994,8 @@ bool NIKinect::get_range_mask(cv::Mat &mask, int min, int max){
  * @param[in]	max
  *				Maximum depth (in milimeters).
  *
- * @retval	@c true if the cv::Mat was successfully created.
- * @retval	@c false if the generator is not active or some other error occurred.
+ * @retval	true if the cv::Mat was successfully created.
+ * @retval	false if the generator is not active or some other error occurred.
  */
 bool NIKinect::get_range_depth(cv::Mat &depth, int min, int max){
 	if(this->_flags[NIKinect::DEPTH_G]){
@@ -932,11 +1016,78 @@ bool NIKinect::get_range_depth(cv::Mat &depth, int min, int max){
 //
 //bool get_range_color(cv::Mat &color, int min = -1, int max = -1);
 
-
+/**
+ * @brief	Returns the pointer to the list of 3D points.
+ * @details	
+ *
+ * @return	The pointer to the list. @c NULL if the list is not calculated.
+ */
 XnPoint3D* NIKinect::get_points_3d(){
 	return (this->_flags_processing[NIKinect::POINT_CLOUD]) ? this->_point_3d : NULL;
 }
 
+/**
+ * @brief	Returns the current 3D analysis step.
+ * @details	@see _point_step.
+ *
+ * @return	The current 3D analysis step.
+ *
+ */
 int NIKinect::get_3d_analysis_step(){
 	return this->_point_step;
+}
+
+
+//-----------------------------------------------------------------------------
+// ACCESS - MUTEX
+//-----------------------------------------------------------------------------
+
+/**
+ * @brief	Lock the NIKinect's mutex (_mutex).
+ * @details	If it is already locked, it block the execution.
+ */
+void NIKinect::mutex_lock(){
+	this->_mutex.lock();
+}
+
+/**
+ * @brief	Try to lock the NIKinect's mutex (_mutex).
+ * @details	If it is already locked, it does not block the execution and returns.
+ *
+ * @retval	true if the lock is acquired.
+ * @retval	false if the lock was already locked.
+ */
+bool NIKinect::mutex_try_lock(){
+	return this->_mutex.try_lock();
+}
+
+/**
+ * @brief	
+ * @details	
+ *
+ */
+void NIKinect::mutex_unlock(){
+	this->_mutex.unlock();
+}
+
+/**
+ * @brief	Checks if the thread is running.
+ * @details	
+ *
+ * @retval	true if the thread is running.
+ * @retval	false if the thread is not running.
+ */
+bool NIKinect::is_running(){
+	return this->_running;
+}
+
+/**
+ * @brief	Set the _running flag to @c false.
+ * @details	If a thread is running. It will stop in the next iteration of the cycle.
+ *			@see update_threaded.
+ *
+ * @todo	Is there need to shutdown something else?
+ */
+void NIKinect::stop_running(){
+	this->_running = false;
 }

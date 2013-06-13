@@ -1,42 +1,76 @@
 /** 
- * @file NIKinect.h 
- * @author Mario Pinto (mario.pinto@ccg.pt) 
- * @date May, 2013 
- * @brief Declaration of the NIKinect Class.
+ * @file	NIKinect.h 
+ * @author	Mario Pinto (mario.pinto@ccg.pt) 
+ * @date	May, 2013 
+ * @brief	Declaration of the NIKinect Class.
  */
+
 #ifndef _NI_KINECT
 #define _NI_KINECT
 
+/** 
+ * \mainpage NIKinect Index Page
+ * 
+ * \section intro_sec Introduction
+ *
+ * This is the introduction for NIKinect.
+ *
+ * \section install_sec Installation for NIKinect.
+ *
+ * \subsection step1 Step 1: 
+ * 					 You open the box.
+ *
+ * \subsection step2 Step 2: 
+ *					 Cut an hole in the box.
+ *
+ * \subsection step3 Step 3: 
+ *					 Put your chunk in the box.
+ *
+ * \section conclusion Conclusion 
+ *
+ *	This is the conclusion of for NIKinect. See \ref install_sec for more details.
+ *
+ */
+
 #include <XnCppWrapper.h>
 #include <opencv2\opencv.hpp>
+#include <boost\thread\mutex.hpp>
 
 /**
  * @class	NIKinect
  * @brief	Wrapper for OpenNI to use Kinect.
- * @details	.
+ * @details	
  */
 class __declspec(dllexport) NIKinect{
 	public:
+		/**
+		 * @brief	Generation Flags.
+		 */
 		enum FLAGS{
-			DEPTH_G = 1,
-			IMAGE_G = 2,
-			IR_G = 4,
-			AUDIO_G = 8,
-			USER_G = 16,
-			GESTURE_G = 32,
-			HAND_G = 64,
-			SCENE_A = 128,
+			DEPTH_G = 1,	/**< Controls the generatation of Depth MetaData information. */
+			IMAGE_G = 2,	/**< Controls the generatation of Image MetaData information. */
+			IR_G = 4,		/**< Controls the generatation of IR    MetaData information. */
+			AUDIO_G = 8,	/**< Controls the generatation of Audio MetaData information. */
+			USER_G = 16,	/**< */
+			GESTURE_G = 32,	/**< */
+			HAND_G = 64,	/**< */
+			SCENE_A = 128,	/**< */
 			
 		};
-		static const int _n_flags = 8;
+		/**< Number of Generation Flags */
+		static const int _n_flags = 8; 
 
+		/**
+		 * @brief	Processing Flags.
+		 */
 		enum PROCESSING{
-			DEPTH_P = 1,
-			MASK_P = 2,
-			IMAGE_P  = 4,
-			DEPTH_COLOR = 8,
-			POINT_CLOUD = 16,
+			DEPTH_P = 1,		/**< */
+			MASK_P = 2,			/**< */
+			IMAGE_P  = 4,		/**< */
+			DEPTH_COLOR = 8,	/**< */
+			POINT_CLOUD = 16,	/**< */
 		};
+		/**< Number of Processing Flags */
 		static const int _n_processing = 5;
 
 	public:
@@ -107,7 +141,13 @@ class __declspec(dllexport) NIKinect{
 		static void compute_color_encoded_depth(const cv::Mat1f& depth_im, cv::Mat& color_depth_im,
                                      double* i_min_val, double* i_max_val);
 		
-		
+		//Thread Control
+		void mutex_lock();
+		bool mutex_try_lock();
+		void mutex_unlock();
+
+		bool is_running();
+		void stop_running();
 
 	private:
 		bool init_from_xml_file(const char* file = 0);
@@ -126,10 +166,15 @@ class __declspec(dllexport) NIKinect{
 
 		void generate_point_cloud();
 
+		bool update_threaded();
 		void update_frame_rate();
 		
 	private:
 		//Flags
+		/**
+		 * @brief Generation Flags. 
+		 * @details Generation Flags Details.
+		 */
 		bool _flags[_n_flags * _n_flags + _n_flags + 1];
 		bool _flags_processing[_n_processing * _n_processing + _n_processing + 1];
 
@@ -138,23 +183,23 @@ class __declspec(dllexport) NIKinect{
 		xn::ScriptNode _scriptNode;
 
 		//Generators
-		xn::DepthGenerator _depth_generator;
-		xn::ImageGenerator _image_generator;
-		xn::IRGenerator _ir_generator;
-		xn::AudioGenerator _audio_generator;
+		xn::DepthGenerator _depth_generator;		/**< OpenNI's Depth		Generator.*/
+		xn::ImageGenerator _image_generator;		/**< OpenNI's Image		Generator.*/
+		xn::IRGenerator _ir_generator;				/**< OpenNI's IR		Generator.*/
+		xn::AudioGenerator _audio_generator;		/**< OpenNI's Audio		Generator.*/
 
-		xn::UserGenerator _user_generator;
-		xn::GestureGenerator _gesture_generator;
-		xn::HandsGenerator _hands_generator;
+		xn::UserGenerator _user_generator;			/**< OpenNI's User		Generator.*/
+		xn::GestureGenerator _gesture_generator;	/**< OpenNI's Gesture	Generator.*/
+		xn::HandsGenerator _hands_generator;		/**< OpenNI's Hand		Generator.*/
 		
-		xn::SceneAnalyzer _scene_analyzer;
+		xn::SceneAnalyzer _scene_analyzer;			/**< OpenNI's Scene		Analyser .*/
 
 		//Meta Data
-		xn::DepthMetaData _depth_md;
-		xn::ImageMetaData _image_md;
-		xn::IRMetaData _ir_md;
-		xn::AudioMetaData _audio_md;
-		xn::SceneMetaData _scene_md;
+		xn::DepthMetaData _depth_md;	/**< OpenNI's Depth	MetaData.*/
+		xn::ImageMetaData _image_md;	/**< OpenNI's Image	MetaData.*/
+		xn::IRMetaData _ir_md;			/**< OpenNI's IR	MetaData.*/
+		xn::AudioMetaData _audio_md;	/**< OpenNI's Audio	MetaData.*/
+		xn::SceneMetaData _scene_md;	/**< OpenNI's Scene	MetaData.*/
 
 		//Processing
 		int _min_depth;
@@ -171,6 +216,9 @@ class __declspec(dllexport) NIKinect{
 		XnPoint3D * _point_2d;
 		XnPoint3D * _point_3d;
 		//pcl::PointCloud<pcl::PointXYZ> _cloud_pcl;
+
+		boost::mutex _mutex;
+		bool _running;
 
 		//Frame Rate
 		double _last_tick;
