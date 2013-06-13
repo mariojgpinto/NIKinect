@@ -51,6 +51,7 @@ class __declspec(dllexport) NIKinect{
 
 		//Running
 		bool update();
+		void run();
 
 		//Processing
 		bool get_floor_plane(double *a, double *b, double *c, double *d);

@@ -16,9 +16,9 @@ QNIKinect::~QNIKinect(){
 void QNIKinect::run(){
 	while(true){
 		//this->_oni_grabber->waitForNextFrame();
-		//this->m_lock.lockForWrite();
+		this->m_lock.lockForWrite();
 		this->_kinect->update();
-		//this->m_lock.unlock();
+		this->m_lock.unlock();
 
 		emit kinect_image();
 	}
