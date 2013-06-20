@@ -1,6 +1,6 @@
 /** 
  * @file	NIKinect.h 
- * @author	Mario Pinto (mario.pinto@ccg.pt) 
+ * @author	Mario Pinto (mariojgpinto@gmail.com) 
  * @date	May, 2013 
  * @brief	Declaration of the NIKinect Class.
  */
@@ -34,7 +34,6 @@
 
 #include <XnCppWrapper.h>
 #include <opencv2\opencv.hpp>
-#include <boost\thread\mutex.hpp>
 
 /**
  * @class	NIKinect
@@ -84,8 +83,7 @@ class __declspec(dllexport) NIKinect{
 		void set_processing_flag(NIKinect::PROCESSING flag, bool value);
 
 		//Running
-		bool update();
-		void run();
+		virtual bool update();
 
 		//Processing
 		bool get_floor_plane(double *a, double *b, double *c, double *d);
@@ -121,15 +119,15 @@ class __declspec(dllexport) NIKinect{
 		bool get_depth_meta_data(xn::DepthMetaData& depth);
 
 		//Access - Convert to OpenCV
-		bool get_depth(cv::Mat &depth);
-		bool get_mask(cv::Mat &mask);
-		bool get_color(cv::Mat &color);
+		virtual bool get_depth(cv::Mat &depth);
+		virtual bool get_mask(cv::Mat &mask);
+		virtual bool get_color(cv::Mat &color);
 		//bool get_depth_as_color(cv::Mat &depth_as_color, int min = -1, int max = -1);
-		bool get_depth_as_color(cv::Mat3b &depth_as_color);
+		virtual bool get_depth_as_color(cv::Mat &depth_as_color);
 
-		bool get_range_depth(cv::Mat &depth, int min = -1, int max = -1);
-		bool get_range_mask(cv::Mat &mask, int min = -1, int max = -1);
-		bool get_range_color(cv::Mat &color, int min = -1, int max = -1);
+		virtual bool get_range_depth(cv::Mat &depth, int min = -1, int max = -1);
+		virtual bool get_range_mask(cv::Mat &mask, int min = -1, int max = -1);
+		//virtual bool get_range_color(cv::Mat &color, int min = -1, int max = -1);
 		//bool get_range_depth_as_color(cv::Mat &depth_as_color, int min = -1, int max = -1);
 
 		//Access 3D
@@ -140,14 +138,6 @@ class __declspec(dllexport) NIKinect{
 
 		static void compute_color_encoded_depth(const cv::Mat1f& depth_im, cv::Mat& color_depth_im,
                                      double* i_min_val, double* i_max_val);
-		
-		//Thread Control
-		void mutex_lock();
-		bool mutex_try_lock();
-		void mutex_unlock();
-
-		bool is_running();
-		void stop_running();
 
 	private:
 		bool init_from_xml_file(const char* file = 0);
@@ -164,12 +154,12 @@ class __declspec(dllexport) NIKinect{
 		
 		bool init_scene_analyzer();
 
-		void generate_point_cloud();
+		virtual void generate_point_cloud();
 
-		bool update_threaded();
+	protected:
 		void update_frame_rate();
 		
-	private:
+	protected:
 		//Flags
 		/**
 		 * @brief Generation Flags. 
@@ -177,7 +167,7 @@ class __declspec(dllexport) NIKinect{
 		 */
 		bool _flags[_n_flags * _n_flags + _n_flags + 1];
 		bool _flags_processing[_n_processing * _n_processing + _n_processing + 1];
-
+		
 		//Context
 		xn::Context _context;
 		xn::ScriptNode _scriptNode;
@@ -209,16 +199,13 @@ class __declspec(dllexport) NIKinect{
 		cv::Mat _depth_mat;
 		cv::Mat _color_mat;
 		cv::Mat _mask_mat;
-		cv::Mat3b _depth_as_color_mat;
+		cv::Mat _depth_as_color_mat;
 
 		//Real World Coordinates?
 		int _point_step;
 		XnPoint3D * _point_2d;
 		XnPoint3D * _point_3d;
 		//pcl::PointCloud<pcl::PointXYZ> _cloud_pcl;
-
-		boost::mutex _mutex;
-		bool _running;
 
 		//Frame Rate
 		double _last_tick;

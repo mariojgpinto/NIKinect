@@ -37,6 +37,7 @@
     <Import Project="..\..\..\PropertySheets\OPENNI.props" />
     <Import Project="..\..\..\PropertySheets\OPENCV_245_DEBUG.props" />
     <Import Project="..\..\..\PropertySheets\OUTPUT_DLL.props" />
+    <Import Project="..\..\..\PropertySheets\BOOST.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='StaticDebug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -44,6 +45,7 @@
     <Import Project="..\..\..\PropertySheets\OPENNI.props" />
     <Import Project="..\..\..\PropertySheets\OPENCV_245_DEBUG.props" />
     <Import Project="..\..\..\PropertySheets\OUTPUT_DLL.props" />
+    <Import Project="..\..\..\PropertySheets\BOOST.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -51,6 +53,7 @@
     <Import Project="..\..\..\PropertySheets\OPENNI.props" />
     <Import Project="..\..\..\PropertySheets\OPENCV_245_RELEASE.props" />
     <Import Project="..\..\..\PropertySheets\OUTPUT_DLL.props" />
+    <Import Project="..\..\..\PropertySheets\BOOST.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>

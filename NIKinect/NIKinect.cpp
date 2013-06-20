@@ -1,6 +1,6 @@
 /** 
  * @file	NIKinect.cpp 
- * @author	Mario Pinto (mario.pinto@ccg.pt) 
+ * @author	Mario Pinto (mariojgpinto@gmail.com) 
  * @date	May, 2013 
  * @brief	Implementation of the NIKinect Class.
  *
@@ -285,7 +285,6 @@ bool NIKinect::init_scene_analyzer(){
 	return this->_flags[NIKinect::SCENE_A];
 }
 
-
 /**
  * @brief	Initializes the User Generator(_user_generator).
  *
@@ -380,83 +379,6 @@ bool NIKinect::update(){
 	this->update_frame_rate();
 
 	return true;
-}
-
-/*
- * @brief	Updates the generator's information.
- * @details	Used in threaded applications. Used in the \sa run method.
- *
- * @TODO	Implement Other Generators and SceneAnalyzer update.
- */
-bool NIKinect::update_threaded(){
-	XnStatus rc;
-
-	//Updates Depth Variables
-	if(this->_flags[NIKinect::DEPTH_G]){
-		this->_depth_generator.GetMetaData(this->_depth_md);
-
-		if(this->_flags_processing[NIKinect::DEPTH_P]){
-			cv::Mat depthMat16UC1(480, 640,CV_16UC1, (void*) this->_depth_md.Data());
-			depthMat16UC1.copyTo(this->_depth_mat);
-		}
-
-		if(this->_flags_processing[NIKinect::DEPTH_P]){
-			//cv::threshold src uses 8-bit or 32-bit floating point so you have to convert before use. Loss of performance.
-			//depthMat16UC1.convertTo(mask8,CV_8UC1);
-			//cv::threshold(mask8,this->_mask_mat,0.1,255,CV_THRESH_BINARY);
-			cv::inRange(this->_depth_mat,1,10000,this->_mask_mat);
-		}
-
-		if(this->_flags_processing[NIKinect::DEPTH_COLOR]){
-			double min = this->_min_depth;
-			double max = this->_max_depth;
-			NIKinect::compute_color_encoded_depth(this->_depth_mat,this->_depth_as_color_mat,&min,&max);
-		}
-	}
-
-	//Updates Image Variables
-	if(this->_flags[NIKinect::IMAGE_G]){
-		this->_image_generator.GetMetaData(_image_md);
-
-		if(this->_flags_processing[NIKinect::IMAGE_P]){
-			cv::Mat color_temp(480,640,CV_8UC3,(void*) _image_md.Data());
-			cv::cvtColor(color_temp,_color_mat,CV_RGB2BGR);
-		}
-	}
-
-	if(this->_flags[NIKinect::SCENE_A]){
-		
-	}
-
-	if(this->_flags_processing[NIKinect::POINT_CLOUD]){
-		this->generate_point_cloud();
-	}
-
-	this->update_frame_rate();
-
-	return true;
-}
-
-/*
- * @brief	.
- * @details	.
- *
- */
-void NIKinect::run(){
-	XnStatus rc;
-	this->_running = true;
-
-	while(this->_running){
-		rc = _context.WaitAnyUpdateAll();
-		if (rc != XN_STATUS_OK){
-			printf("Read failed: %s\n", xnGetStatusString(rc));
-			return;
-		}
-
-		_mutex.lock();
-		this->update_threaded();
-		_mutex.unlock();
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -937,7 +859,7 @@ bool NIKinect::get_color(cv::Mat &color){
  * @retval	true if the cv::Mat was successfully created.
  * @retval	false if the generator is not active or some other error occurred.
  */
-bool NIKinect::get_depth_as_color(cv::Mat3b &depth_as_color){
+bool NIKinect::get_depth_as_color(cv::Mat &depth_as_color){
 	if(this->_flags[NIKinect::DEPTH_G] && this->_flags_processing[NIKinect::DEPTH_COLOR]){
 		this->_depth_as_color_mat.copyTo(depth_as_color);
 		return true;
@@ -1038,56 +960,3 @@ int NIKinect::get_3d_analysis_step(){
 }
 
 
-//-----------------------------------------------------------------------------
-// ACCESS - MUTEX
-//-----------------------------------------------------------------------------
-
-/**
- * @brief	Lock the NIKinect's mutex (_mutex).
- * @details	If it is already locked, it block the execution.
- */
-void NIKinect::mutex_lock(){
-	this->_mutex.lock();
-}
-
-/**
- * @brief	Try to lock the NIKinect's mutex (_mutex).
- * @details	If it is already locked, it does not block the execution and returns.
- *
- * @retval	true if the lock is acquired.
- * @retval	false if the lock was already locked.
- */
-bool NIKinect::mutex_try_lock(){
-	return this->_mutex.try_lock();
-}
-
-/**
- * @brief	
- * @details	
- *
- */
-void NIKinect::mutex_unlock(){
-	this->_mutex.unlock();
-}
-
-/**
- * @brief	Checks if the thread is running.
- * @details	
- *
- * @retval	true if the thread is running.
- * @retval	false if the thread is not running.
- */
-bool NIKinect::is_running(){
-	return this->_running;
-}
-
-/**
- * @brief	Set the _running flag to @c false.
- * @details	If a thread is running. It will stop in the next iteration of the cycle.
- *			@see update_threaded.
- *
- * @todo	Is there need to shutdown something else?
- */
-void NIKinect::stop_running(){
-	this->_running = false;
-}

@@ -1,8 +1,9 @@
 
-#include <NIKinect.h>
+//#include <NIKinect.h>
+#include <NIThreadedKinect.h>
 
 int main(int argc, char* argv[]){
-	NIKinect* kinect = new NIKinect();
+	NIThreadedKinect* kinect = new NIThreadedKinect();
 
 	if(argc == 2){
 		kinect->init(argv[1]);
@@ -14,6 +15,10 @@ int main(int argc, char* argv[]){
 	//kinect->init("C:\\Dev\\Kinect\\Data\\ONI\\mirror_papers.oni");
 	//kinect->init("C:\\Dev\\Walkys\\Project\\Data\\foot_2_front.oni");
 	//kinect->init();
+
+	kinect->start_thread(NIThreadedKinect::CAPTURE_T);
+	kinect->start_thread(NIThreadedKinect::POINT_CLOUD_T);
+
 	bool result = false;
 
 //	result = kinect->init_generators();
@@ -25,12 +30,13 @@ int main(int argc, char* argv[]){
 	cv::Mat3b depth_as_color;
 
 	
-
+	Sleep(1000);
 	char c = 0;
 	while((c = cv::waitKey(31)) != 27){
-		if(!kinect->update()) 
-			break;
+		//if(!kinect->update()) 
+		//	break;
 
+		kinect->mutex_lock(NIThreadedKinect::CAPTURE_T);
 		if(kinect->get_color(color)){
 			imshow("Color",color);
 		}
@@ -59,6 +65,8 @@ int main(int argc, char* argv[]){
 			//color.copyTo(masked_color,mask);
 			//imshow("MaskedColor",masked_color);
 		}
+
+		kinect->mutex_unlock(NIThreadedKinect::CAPTURE_T);
 
 		printf("Frame Rate: %.2f\n",kinect->get_frame_rate());
 	}
