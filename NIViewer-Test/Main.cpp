@@ -17,6 +17,7 @@ int main(int argc, char* argv[]){
 	//kinect->init();
 
 	kinect->start_thread(NIThreadedKinect::CAPTURE_T);
+	Sleep(1000);
 	kinect->start_thread(NIThreadedKinect::POINT_CLOUD_T);
 
 	bool result = false;
@@ -30,7 +31,7 @@ int main(int argc, char* argv[]){
 	cv::Mat3b depth_as_color;
 
 	
-	Sleep(1000);
+	
 	char c = 0;
 	while((c = cv::waitKey(31)) != 27){
 		//if(!kinect->update()) 

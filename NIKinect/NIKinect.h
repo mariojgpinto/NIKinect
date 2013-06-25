@@ -68,9 +68,10 @@ class __declspec(dllexport) NIKinect{
 			IMAGE_P  = 4,		/**< */
 			DEPTH_COLOR = 8,	/**< */
 			POINT_CLOUD = 16,	/**< */
+			POINT_CLOUD_PCL = 32,	/**< */
 		};
 		/**< Number of Processing Flags */
-		static const int _n_processing = 5;
+		static const int _n_processing = 6;
 
 	public:
 		NIKinect();

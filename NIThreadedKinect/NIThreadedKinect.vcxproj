@@ -37,6 +37,8 @@
     <Import Project="..\..\..\PropertySheets\BOOST.props" />
     <Import Project="..\..\..\PropertySheets\OUTPUT_DLL.props" />
     <Import Project="..\..\..\PropertySheets\NIKINECT.props" />
+    <Import Project="..\..\..\PropertySheets\PCL.props" />
+    <Import Project="..\..\..\PropertySheets\EIGEN.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -45,6 +47,8 @@
     <Import Project="..\..\..\PropertySheets\BOOST.props" />
     <Import Project="..\..\..\PropertySheets\OUTPUT_DLL.props" />
     <Import Project="..\..\..\PropertySheets\NIKINECT.props" />
+    <Import Project="..\..\..\PropertySheets\PCL.props" />
+    <Import Project="..\..\..\PropertySheets\EIGEN.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />

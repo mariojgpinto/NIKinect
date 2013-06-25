@@ -13,6 +13,9 @@
 #include <boost\thread\mutex.hpp>
 #include <boost\thread\thread.hpp>
 
+#include <pcl\point_cloud.h>
+#include <pcl\point_types.h>
+
 /**
  * @class	NIThreadedKinect
  * @brief	Wrapper for OpenNI to use Kinect with threads.
@@ -35,6 +38,8 @@ class __declspec(dllexport) NIThreadedKinect : public NIKinect{
 			STOPPED
 		};
 		
+		//Explanation: http://www.pcl-users.org/Eigen-Dense-Storage-Assertion-Error-Solved-td4023763.html
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
 	public:
 		NIThreadedKinect();
@@ -67,8 +72,13 @@ class __declspec(dllexport) NIThreadedKinect : public NIKinect{
 		bool mutex_try_lock(NIThreadedKinect::THREAD_ID id);
 		void mutex_unlock(NIThreadedKinect::THREAD_ID id);	
 
-		bool get_3d_copy(XnPoint3D *_point_3d);
+		XnPoint3D** get_3d_points();
+		pcl::PointCloud<pcl::PointXYZ> * get_point_cloud();
 
+		bool copy_3d_points(XnPoint3D *_point_3d);
+		bool copy_point_cloud(pcl::PointCloud<pcl::PointXYZ> &cloud);
+		
+		
 
 	private:
 		//SETUP
@@ -77,8 +87,6 @@ class __declspec(dllexport) NIThreadedKinect : public NIKinect{
 		bool update_kinect();
 		void run_point_cloud();
 		bool update_point_cloud();
-
-		void generate_point_cloud();
 
 	private:
 		//FLAGS
@@ -94,8 +102,13 @@ class __declspec(dllexport) NIThreadedKinect : public NIKinect{
 
 		//Point Cloud
 		bool new_point_cloud;
+		int _n_points;
 		XnPoint3D *_point_2d;
 		XnPoint3D *_point_3d;
+		XnPoint3D *_point_3d_access;
+		pcl::PointCloud<pcl::PointXYZ> _pcl_cloud;
+		pcl::PointCloud<pcl::PointXYZ> _pcl_cloud_access;
+		
 
 		xn::DepthMetaData _depth_md_copy;
 		cv::Mat _color_mat_copy;
