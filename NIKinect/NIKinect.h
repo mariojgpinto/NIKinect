@@ -35,6 +35,17 @@
 #include <XnCppWrapper.h>
 #include <opencv2\opencv.hpp>
 
+class __declspec(dllexport) Color{
+	public:
+		Color();
+		Color(int rr, int gg, int bb){
+			this->r = rr; this->g = gg; this->b = bb;
+		}
+		~Color();
+
+		int r,g,b;
+};
+
 /**
  * @class	NIKinect
  * @brief	Wrapper for OpenNI to use Kinect.
@@ -63,15 +74,16 @@ class __declspec(dllexport) NIKinect{
 		 * @brief	Processing Flags.
 		 */
 		enum PROCESSING{
-			DEPTH_P = 1,		/**< */
-			MASK_P = 2,			/**< */
-			IMAGE_P  = 4,		/**< */
-			DEPTH_COLOR = 8,	/**< */
-			POINT_CLOUD = 16,	/**< */
-			POINT_CLOUD_PCL = 32,	/**< */
+			DEPTH_P = 1,				/**< */
+			MASK_P = 2,					/**< */
+			IMAGE_P  = 4,				/**< */
+			DEPTH_COLOR = 8,			/**< */
+			POINT_CLOUD = 16,			/**< */
+			POINT_CLOUD_PCL = 32,		/**< */
+			POINT_CLOUD_PCL_COLOR = 64,	/**< */
 		};
 		/**< Number of Processing Flags */
-		static const int _n_processing = 6;
+		static const int _n_processing = 7;
 
 	public:
 		NIKinect();
@@ -84,7 +96,7 @@ class __declspec(dllexport) NIKinect{
 		void set_processing_flag(NIKinect::PROCESSING flag, bool value);
 
 		//Running
-		virtual bool update();
+		bool update();
 
 		//Processing
 		bool get_floor_plane(double *a, double *b, double *c, double *d);

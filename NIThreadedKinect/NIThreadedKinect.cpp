@@ -25,6 +25,7 @@ NIThreadedKinect::NIThreadedKinect(){
 
 	this->_point_2d = (XnPoint3D *)malloc(sizeof(XnPoint3D) * XN_VGA_Y_RES * XN_VGA_X_RES);
 	this->_point_3d = (XnPoint3D *)malloc(sizeof(XnPoint3D) * XN_VGA_Y_RES * XN_VGA_X_RES);
+	this->_point_clr = (Color*)malloc(sizeof(Color) * XN_VGA_Y_RES * XN_VGA_X_RES);
 	this->_point_3d_access = (XnPoint3D *)malloc(sizeof(XnPoint3D) * XN_VGA_Y_RES * XN_VGA_X_RES);
 	
 	this->_pcl_cloud.width = 640*480;
@@ -134,7 +135,7 @@ void NIThreadedKinect::run_point_cloud(){
 			//TODO How to destroy the thread?
 			return;
 		else{
-			new_point_cloud = true;
+			_new_point_cloud = true;
 		}
 	}
 }
@@ -206,14 +207,42 @@ bool NIThreadedKinect::update_point_cloud(){
 	_depth_generator.ConvertProjectiveToRealWorld(this->_n_points, this->_point_2d, this->_point_3d);
 
 	if(this->_flags_processing[NIKinect::POINT_CLOUD_PCL]){
-		this->_pcl_cloud.clear();
-		for(int i = 0 ; i < this->_n_points ; ++i){
-			this->_pcl_cloud.push_back(pcl::PointXYZ(this->_point_3d[i].X,this->_point_3d[i].Y,this->_point_3d[i].Z));
-		}
+		if(this->_flags_processing[NIKinect::POINT_CLOUD_PCL_COLOR]){
+			ac = 0;
+			uint8_t* ptr_clr = (uint8_t*)this->_color_mat.data;
+			for(int y=0; y<XN_VGA_Y_RES; y+=_point_step) { 
+				for(int x=0; x<XN_VGA_X_RES; x+=_point_step) { 
+					this->_point_clr[ac].r = ptr_clr[y * XN_VGA_X_RES * 3 + x* 3 + 2];
+					this->_point_clr[ac].g = ptr_clr[y * XN_VGA_X_RES * 3 + x* 3 + 1];
+					this->_point_clr[ac].b = ptr_clr[y * XN_VGA_X_RES * 3 + x* 3 + 0];
+					ac++;
+				}
+			} 
+			
+			this->_pcl_cloud_color.clear();
+			for(int i = 0 ; i < this->_n_points ; ++i){
+				pcl::PointXYZRGB pt(this->_point_clr[i].r,this->_point_clr[i].g,this->_point_clr[i].b);
+				pt.x = this->_point_3d[i].X;
+				pt.y = this->_point_3d[i].Y;
+				pt.z = this->_point_3d[i].Z;
+				this->_pcl_cloud_color.push_back(pt);	
+			}
 
-		this->_mutex[NIThreadedKinect::POINT_CLOUD_T]->lock();
-			_pcl_cloud_access = _pcl_cloud;
-		this->_mutex[NIThreadedKinect::POINT_CLOUD_T]->unlock();
+			this->_mutex[NIThreadedKinect::POINT_CLOUD_T]->lock();
+				this->_pcl_cloud_color_access = this->_pcl_cloud_color;
+			this->_mutex[NIThreadedKinect::POINT_CLOUD_T]->unlock();
+
+		}
+		else{
+			this->_pcl_cloud.clear();
+			for(int i = 0 ; i < this->_n_points ; ++i){
+				this->_pcl_cloud.push_back(pcl::PointXYZ(this->_point_3d[i].X,this->_point_3d[i].Y,this->_point_3d[i].Z));
+			}
+
+			this->_mutex[NIThreadedKinect::POINT_CLOUD_T]->lock();
+				this->_pcl_cloud_access = this->_pcl_cloud;
+			this->_mutex[NIThreadedKinect::POINT_CLOUD_T]->unlock();
+		}
 	}
 	else{
 		this->_mutex[NIThreadedKinect::POINT_CLOUD_T]->lock();
@@ -237,7 +266,7 @@ bool NIThreadedKinect::update_point_cloud(){
  * @return	
  *			
  */
-XnPoint3D** NIThreadedKinect::get_3d_points(){
+XnPoint3D** NIThreadedKinect::consume_3d_points(){
 	return &this->_point_3d_access;
 }
 
@@ -248,9 +277,9 @@ XnPoint3D** NIThreadedKinect::get_3d_points(){
  * @return	
  *			
  */
-pcl::PointCloud<pcl::PointXYZ> * NIThreadedKinect::get_point_cloud(){
-	if(this->_flags_processing[NIKinect::POINT_CLOUD_PCL] && new_point_cloud){
-		this->new_point_cloud = false;
+pcl::PointCloud<pcl::PointXYZ> * NIThreadedKinect::consume_point_cloud(){
+	if(this->_flags_processing[NIKinect::POINT_CLOUD_PCL] && this->_new_point_cloud){
+		this->_new_point_cloud = false;
 		return &this->_pcl_cloud_access;
 	}
 	else
@@ -267,10 +296,10 @@ pcl::PointCloud<pcl::PointXYZ> * NIThreadedKinect::get_point_cloud(){
  * @retval	true	
  * @retval	false	
  */
-bool NIThreadedKinect::copy_3d_points(XnPoint3D *point_3d){
-	if(new_point_cloud){
+bool NIThreadedKinect::consume_copy_3d_points(XnPoint3D *point_3d){
+	if(this->_new_point_cloud){
 		memcpy(point_3d,_point_3d,sizeof(XnPoint3D) * XN_VGA_Y_RES * XN_VGA_X_RES);
-		new_point_cloud = false;
+		this->_new_point_cloud = false;
 		return true;
 	}
 	else
@@ -287,10 +316,9 @@ bool NIThreadedKinect::copy_3d_points(XnPoint3D *point_3d){
  * @retval	true	
  * @retval	false	
  */
-bool NIThreadedKinect::copy_point_cloud(pcl::PointCloud<pcl::PointXYZ> &cloud){
-	if(new_point_cloud){	
+bool NIThreadedKinect::consume_copy_point_cloud(pcl::PointCloud<pcl::PointXYZ> &cloud){
+	if(this->_new_point_cloud){	
 		cloud.clear();
-
 		if(this->_flags_processing[NIKinect::POINT_CLOUD_PCL]){
 			cloud = this->_pcl_cloud_access;
 		}
@@ -300,12 +328,55 @@ bool NIThreadedKinect::copy_point_cloud(pcl::PointCloud<pcl::PointXYZ> &cloud){
 					cloud.push_back(pcl::PointXYZ(this->_point_3d_access[i].X,this->_point_3d_access[i].Y,this->_point_3d_access[i].Z));
 			}
 		}
-		this->new_point_cloud = false;
+		this->_new_point_cloud = false;
 
 		return true;
 	}
 	else
 		return false;
+}
+
+/** 
+ * @brief	
+ * @details	
+ *
+ * @param[out]		cloud
+ *					
+ *
+ * @retval	true	
+ * @retval	false	
+ */
+bool NIThreadedKinect::consume_copy_point_cloud(pcl::PointCloud<pcl::PointXYZRGB> &cloud){
+	if(this->_new_point_cloud){	
+		cloud.clear();
+
+		if(this->_flags_processing[NIKinect::POINT_CLOUD_PCL_COLOR]){
+			cloud = this->_pcl_cloud_color_access;
+		}
+		else{
+			for(int i = 0 ; i < this->_n_points ; ++i){
+				if(this->_point_3d_access[i].Z > 0){
+					pcl::PointXYZRGB pt(this->_point_clr[i].r,this->_point_clr[i].g,this->_point_clr[i].b);
+					pt.x = this->_point_3d[i].X;
+					pt.y = this->_point_3d[i].Y;
+					pt.z = this->_point_3d[i].Z;
+					cloud.push_back(pt);
+				}
+			}
+		}
+		this->_new_point_cloud = false;
+
+		return true;
+	}
+	else
+		return false;
+}
+
+/** 
+ *
+ */
+bool NIThreadedKinect::new_point_cloud(){
+	return this->_new_point_cloud;
 }
 
 //-----------------------------------------------------------------------------

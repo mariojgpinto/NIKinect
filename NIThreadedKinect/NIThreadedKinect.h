@@ -16,6 +16,7 @@
 #include <pcl\point_cloud.h>
 #include <pcl\point_types.h>
 
+
 /**
  * @class	NIThreadedKinect
  * @brief	Wrapper for OpenNI to use Kinect with threads.
@@ -72,12 +73,14 @@ class __declspec(dllexport) NIThreadedKinect : public NIKinect{
 		bool mutex_try_lock(NIThreadedKinect::THREAD_ID id);
 		void mutex_unlock(NIThreadedKinect::THREAD_ID id);	
 
-		XnPoint3D** get_3d_points();
-		pcl::PointCloud<pcl::PointXYZ> * get_point_cloud();
+		XnPoint3D** consume_3d_points();
+		pcl::PointCloud<pcl::PointXYZ> * consume_point_cloud();
 
-		bool copy_3d_points(XnPoint3D *_point_3d);
-		bool copy_point_cloud(pcl::PointCloud<pcl::PointXYZ> &cloud);
-		
+		bool consume_copy_3d_points(XnPoint3D *_point_3d);
+		bool consume_copy_point_cloud(pcl::PointCloud<pcl::PointXYZ> &cloud);
+		bool consume_copy_point_cloud(pcl::PointCloud<pcl::PointXYZRGB> &cloud);
+
+		bool new_point_cloud();
 		
 
 	private:
@@ -101,14 +104,16 @@ class __declspec(dllexport) NIThreadedKinect : public NIKinect{
 		boost::mutex *_mutex[_n_threads];
 
 		//Point Cloud
-		bool new_point_cloud;
+		bool _new_point_cloud;
 		int _n_points;
 		XnPoint3D *_point_2d;
 		XnPoint3D *_point_3d;
+		Color*_point_clr;
 		XnPoint3D *_point_3d_access;
 		pcl::PointCloud<pcl::PointXYZ> _pcl_cloud;
 		pcl::PointCloud<pcl::PointXYZ> _pcl_cloud_access;
-		
+		pcl::PointCloud<pcl::PointXYZRGB> _pcl_cloud_color;
+		pcl::PointCloud<pcl::PointXYZRGB> _pcl_cloud_color_access;
 
 		xn::DepthMetaData _depth_md_copy;
 		cv::Mat _color_mat_copy;
