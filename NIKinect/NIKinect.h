@@ -97,6 +97,8 @@ class __declspec(dllexport) NIKinect{
 
 		//Running
 		bool update();
+		bool update_openni();
+		bool update_images();
 
 		//Processing
 		bool get_floor_plane(double *a, double *b, double *c, double *d);
@@ -168,6 +170,8 @@ class __declspec(dllexport) NIKinect{
 		bool init_scene_analyzer();
 
 		virtual void generate_point_cloud();
+
+		
 
 	protected:
 		void update_frame_rate();

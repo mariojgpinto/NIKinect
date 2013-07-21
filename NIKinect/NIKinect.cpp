@@ -325,16 +325,20 @@ bool NIKinect::init_user_generator(){
  * @todo	Implement Other Generators and SceneAnalyzer update.
  */
 bool NIKinect::update(){
-	XnStatus rc;
-	rc = _context.WaitAnyUpdateAll();
-
-	if (rc != XN_STATUS_OK)
-	{
-		printf("Read failed: %s\n", xnGetStatusString(rc));
-		//break;
-		return false;
+	if(this->update_openni()){
+		return this->update_images();
 	}
+	return false;
+}
 
+/**
+ * @brief	Updates the NIKinect's Metda-Data and Image information.
+ * @details	When called on multi-threaded environment, use it inside locks.
+ *
+ * @retval	true if the information was successfully updated.
+ * @retval	false if an error occurred.
+ */
+bool NIKinect::update_images(){
 	//Updates Depth Variables
 	if(this->_flags[NIKinect::DEPTH_G]){
 		this->_depth_generator.GetMetaData(this->_depth_md);
@@ -377,6 +381,27 @@ bool NIKinect::update(){
 	}
 
 	this->update_frame_rate();
+
+	return true;
+}
+
+/**
+ * @brief	Updates the generator's information
+ * @details	When called on multi-threaded environment, use it outside locks.
+ *
+ * @retval	true if generators where successfully updated.
+ * @retval	false if an error occurred.
+ */
+bool NIKinect::update_openni(){
+	XnStatus rc;
+	rc = _context.WaitAnyUpdateAll();
+
+	if (rc != XN_STATUS_OK)
+	{
+		printf("Read failed: %s\n", xnGetStatusString(rc));
+		//break;
+		return false;
+	}
 
 	return true;
 }
