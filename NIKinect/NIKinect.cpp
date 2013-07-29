@@ -179,13 +179,29 @@ void NIKinect::set_3d_analysis_step(int step){
  * @retval	false if some error occurred.
  */
 bool NIKinect::init_depth_generator(){
+	static xn::NodeInfoList depth_nodes;
 	XnStatus rc;
-	rc = _context.FindExistingNode(XN_NODE_TYPE_DEPTH,this->_depth_generator);
-	//If the generator was already created, don't create it again.
-	if (rc != XN_STATUS_OK)
-	{
-		rc = _depth_generator.Create(_context);
+	rc = this->_context.EnumerateProductionTrees (XN_NODE_TYPE_DEPTH, NULL, depth_nodes, NULL);
 
+	int idx = 2;
+	int counter = 0;
+	for (xn::NodeInfoList::Iterator nodeIt =depth_nodes.Begin(); nodeIt != depth_nodes.End(); ++nodeIt, counter++) {
+		if(counter == idx){
+		xn::NodeInfo info = *nodeIt;
+		const XnProductionNodeDescription& description = info.GetDescription();
+	
+		XnMapOutputMode mode;
+		mode.nXRes	= 640;
+		mode.nYRes	= 480;
+		mode.nFPS	= 30;
+
+		rc = this->_context.CreateProductionTree (info);
+		
+		this->_depth_generator;// = new xn::DepthGenerator();
+		//DepthMetaData* g_depthMD = new DepthMetaData();
+
+		rc = info.GetInstance (this->_depth_generator);
+		
 		if (rc != XN_STATUS_OK)
 		{
 			printf("The Depth Node could not be created.%s\n",xnGetStatusString(rc));
@@ -199,12 +215,37 @@ bool NIKinect::init_depth_generator(){
 			this->_flags_processing[NIKinect::DEPTH_P] = true;
 			this->_flags_processing[NIKinect::MASK_P] = true;
 		}
+
+		this->_depth_generator.SetMapOutputMode(mode);
+		this->_depth_generator.GetMetaData(this->_depth_md);
+		this->_depth_generator.StartGenerating();
+		}
 	}
-	else{
-		this->_flags[NIKinect::DEPTH_G] = true;
-		this->_flags_processing[NIKinect::DEPTH_P] = true;
-		this->_flags_processing[NIKinect::MASK_P] = true;
-	}
+	//rc = _context.FindExistingNode(XN_NODE_TYPE_DEPTH,this->_depth_generator);
+	////If the generator was already created, don't create it again.
+	//if (rc != XN_STATUS_OK)
+	//{
+	//	rc = _depth_generator.Create(_context);
+
+	//	if (rc != XN_STATUS_OK)
+	//	{
+	//		printf("The Depth Node could not be created.%s\n",xnGetStatusString(rc));
+	//		this->_flags[NIKinect::DEPTH_G] = false;
+	//		this->_flags_processing[NIKinect::DEPTH_P] = false;
+	//		this->_flags_processing[NIKinect::MASK_P] = false;
+
+	//	}
+	//	else{
+	//		this->_flags[NIKinect::DEPTH_G] = true;
+	//		this->_flags_processing[NIKinect::DEPTH_P] = true;
+	//		this->_flags_processing[NIKinect::MASK_P] = true;
+	//	}
+	//}
+	//else{
+	//	this->_flags[NIKinect::DEPTH_G] = true;
+	//	this->_flags_processing[NIKinect::DEPTH_P] = true;
+	//	this->_flags_processing[NIKinect::MASK_P] = true;
+	//}
 
 	if(this->_flags[NIKinect::DEPTH_G]){
 		this->_depth_generator.GetMetaData(this->_depth_md);
