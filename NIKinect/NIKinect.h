@@ -95,6 +95,8 @@ class __declspec(dllexport) NIKinect{
 		void set_max_depth(int milimeters);
 		void set_processing_flag(NIKinect::PROCESSING flag, bool value);
 
+		void set_image_mode(int width, int height, int fps);
+
 		//Running
 		bool update();
 		bool update_openni();
@@ -118,9 +120,9 @@ class __declspec(dllexport) NIKinect{
 		int get_max_depth();
 
 		//Access - Generator
-		xn::Context& get_context();
-		xn::DepthGenerator& get_depth_generator();
-		xn::ImageGenerator& get_image_generator();
+		xn::Context* get_context();
+		xn::DepthGenerator* get_depth_generator();
+		xn::ImageGenerator* get_image_generator();
 		xn::IRGenerator& get_ir_generator();
 		xn::AudioGenerator& get_audio_generator();
 
@@ -186,12 +188,12 @@ class __declspec(dllexport) NIKinect{
 		bool _flags_processing[_n_processing * _n_processing + _n_processing + 1];
 		
 		//Context
-		xn::Context _context;
+		static xn::Context *_context;
 		xn::ScriptNode _scriptNode;
 
 		//Generators
-		xn::DepthGenerator _depth_generator;		/**< OpenNI's Depth		Generator.*/
-		xn::ImageGenerator _image_generator;		/**< OpenNI's Image		Generator.*/
+		xn::DepthGenerator* _depth_generator;		/**< OpenNI's Depth		Generator.*/
+		xn::ImageGenerator* _image_generator;		/**< OpenNI's Image		Generator.*/
 		xn::IRGenerator _ir_generator;				/**< OpenNI's IR		Generator.*/
 		xn::AudioGenerator _audio_generator;		/**< OpenNI's Audio		Generator.*/
 
@@ -207,6 +209,8 @@ class __declspec(dllexport) NIKinect{
 		xn::IRMetaData _ir_md;			/**< OpenNI's IR	MetaData.*/
 		xn::AudioMetaData _audio_md;	/**< OpenNI's Audio	MetaData.*/
 		xn::SceneMetaData _scene_md;	/**< OpenNI's Scene	MetaData.*/
+
+		XnMapOutputMode _image_mode;
 
 		//Processing
 		int _min_depth;

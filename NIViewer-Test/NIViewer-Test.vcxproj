@@ -98,9 +98,6 @@
     <ProjectReference Include="..\NIKinect\NIKinect.vcxproj">
       <Project>{6944f82a-616d-4e60-a94e-21229ce98c6d}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\NIThreadedKinect\NIThreadedKinect.vcxproj">
-      <Project>{c513a8cd-fe8f-45bd-b77c-525c0bba1417}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

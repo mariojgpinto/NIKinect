@@ -98,7 +98,7 @@ void NIThreadedKinect::run_kinect(){
 
 	while(this->_running[NIThreadedKinect::CAPTURE_T]){
 			
-		rc = this->_context.WaitAnyUpdateAll();
+		rc = this->_context->WaitAnyUpdateAll();
 		if (rc != XN_STATUS_OK){
 			printf("Read failed: %s\n", xnGetStatusString(rc));
 			return;
@@ -149,7 +149,7 @@ void NIThreadedKinect::run_point_cloud(){
 bool NIThreadedKinect::update_kinect(){
 	//Updates Depth Variables
 	if(this->_flags[NIKinect::DEPTH_G]){
-		this->_depth_generator.GetMetaData(this->_depth_md);
+		this->_depth_generator->GetMetaData(this->_depth_md);
 
 		if(this->_flags_processing[NIKinect::DEPTH_P]){
 			cv::Mat depthMat16UC1(480, 640,CV_16UC1, (void*) this->_depth_md.Data());
@@ -172,7 +172,7 @@ bool NIThreadedKinect::update_kinect(){
 
 	//Updates Image Variables
 	if(this->_flags[NIKinect::IMAGE_G]){
-		this->_image_generator.GetMetaData(_image_md);
+		this->_image_generator->GetMetaData(_image_md);
 
 		if(this->_flags_processing[NIKinect::IMAGE_P]){
 			cv::Mat color_temp(480,640,CV_8UC3,(void*) _image_md.Data());
@@ -204,7 +204,7 @@ bool NIThreadedKinect::update_point_cloud(){
 
 	this->_n_points = (XN_VGA_Y_RES*XN_VGA_X_RES) / (float)(_point_step*_point_step);
 
-	_depth_generator.ConvertProjectiveToRealWorld(this->_n_points, this->_point_2d, this->_point_3d);
+	_depth_generator->ConvertProjectiveToRealWorld(this->_n_points, this->_point_2d, this->_point_3d);
 
 	if(this->_flags_processing[NIKinect::POINT_CLOUD_PCL]){
 		if(this->_flags_processing[NIKinect::POINT_CLOUD_PCL_COLOR]){

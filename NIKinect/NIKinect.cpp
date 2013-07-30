@@ -10,6 +10,7 @@
 
 //const char* NIKinect::_sample_xml_path="C:\\Dev\\External\\OpenNI\\Data\\SamplesConfig.xml";
 
+xn::Context *NIKinect::_context = new xn::Context();
 //-----------------------------------------------------------------------------
 // CONSTRUCTORS
 //-----------------------------------------------------------------------------
@@ -37,6 +38,10 @@ NIKinect::NIKinect():
 	this->_point_2d = (XnPoint3D *)malloc(sizeof(XnPoint3D) * XN_VGA_Y_RES * XN_VGA_X_RES); 
 	this->_point_3d = (XnPoint3D *)malloc(sizeof(XnPoint3D) * XN_VGA_Y_RES * XN_VGA_X_RES); 
 	
+	this->_image_mode.nXRes	= 640;
+	this->_image_mode.nYRes	= 480;
+	this->_image_mode.nFPS	= 30;
+	//this->_context = new xn::Context();
 	//this->_cloud_pcl.width = XN_VGA_Y_RES * XN_VGA_X_RES;
 	//this->_cloud_pcl.height = 1;
 	//this->_cloud_pcl.points.resize (this->_cloud_pcl.width * this->_cloud_pcl.height);
@@ -62,10 +67,10 @@ NIKinect::~NIKinect(){
 bool NIKinect::init(const char* file, int n_kinect, int generators){
 	XnStatus rc;
 
-	rc = this->_context.Init();
+	rc = this->_context->Init();
 
 	if(file){
-		rc = this->_context.OpenFileRecording(file);
+		rc = this->_context->OpenFileRecording(file);
 	}
 	else{
 		
@@ -119,8 +124,10 @@ bool NIKinect::init(const char* file, int n_kinect, int generators){
 		return false;
 	}
 	else{
-		rc = _depth_generator.GetAlternativeViewPointCap().SetViewPoint(_image_generator);
-		rc = this->_context.StartGeneratingAll();
+		_image_generator->GetMirrorCap().SetMirror(true);
+		rc = _depth_generator->GetAlternativeViewPointCap().SetViewPoint(*_image_generator);
+		_depth_generator->GetMirrorCap().SetMirror(true);
+		rc = this->_context->StartGeneratingAll();
 				
 		return (rc == XN_STATUS_OK);
 	}
@@ -170,6 +177,12 @@ void NIKinect::set_3d_analysis_step(int step){
 	this->_point_step = step;
 }
 
+void NIKinect::set_image_mode(int width, int height, int fps){
+	this->_image_mode.nXRes	= width;
+	this->_image_mode.nYRes	= height;
+	this->_image_mode.nFPS	= fps;
+}
+
 //-----------------------------------------------------------------------------
 // SETUP - INITIALIZE GENERATORS
 //-----------------------------------------------------------------------------
@@ -182,7 +195,7 @@ void NIKinect::set_3d_analysis_step(int step){
 bool NIKinect::init_depth_generator(int index){
 	static xn::NodeInfoList depth_nodes;
 	XnStatus rc;
-	rc = this->_context.EnumerateProductionTrees (XN_NODE_TYPE_DEPTH, NULL, depth_nodes, NULL);
+	rc = this->_context->EnumerateProductionTrees (XN_NODE_TYPE_DEPTH, NULL, depth_nodes, NULL);
 
 	int counter = 0;
 	for (xn::NodeInfoList::Iterator nodeIt =depth_nodes.Begin(); nodeIt != depth_nodes.End(); ++nodeIt, counter++) {
@@ -195,12 +208,12 @@ bool NIKinect::init_depth_generator(int index){
 			mode.nYRes	= 480;
 			mode.nFPS	= 30;
 
-			rc = this->_context.CreateProductionTree (info);
+			rc = this->_context->CreateProductionTree (info);
 		
-			this->_depth_generator;// = new xn::DepthGenerator();
+			this->_depth_generator = new xn::DepthGenerator();
 			//DepthMetaData* g_depthMD = new DepthMetaData();
 
-			rc = info.GetInstance (this->_depth_generator);
+			rc = info.GetInstance (*this->_depth_generator);
 		
 			if (rc != XN_STATUS_OK)
 			{
@@ -216,23 +229,23 @@ bool NIKinect::init_depth_generator(int index){
 				this->_flags_processing[NIKinect::MASK_P] = true;
 			}
 
-			this->_depth_generator.SetMapOutputMode(mode);
-			//this->_depth_generator.GetMetaData(this->_depth_md);
-			this->_depth_generator.StartGenerating();
+			this->_depth_generator->SetMapOutputMode(mode);
+			//this->_depth_generator->GetMetaData(this->_depth_md);
+			this->_depth_generator->StartGenerating();
 
 			break;
 		}
 	}
 
 	if(this->_flags[NIKinect::DEPTH_G]){
-		this->_depth_generator.GetMetaData(this->_depth_md);
+		this->_depth_generator->GetMetaData(this->_depth_md);
 	}
 
-	//rc = _context.FindExistingNode(XN_NODE_TYPE_DEPTH,this->_depth_generator);
+	//rc = _context->FindExistingNode(XN_NODE_TYPE_DEPTH,this->_depth_generator);
 	////If the generator was already created, don't create it again.
 	//if (rc != XN_STATUS_OK)
 	//{
-	//	rc = _depth_generator.Create(_context);
+	//	rc = _depth_generator->Create(_context);
 
 	//	if (rc != XN_STATUS_OK)
 	//	{
@@ -264,24 +277,20 @@ bool NIKinect::init_depth_generator(int index){
  * @retval	false if some error occurred.
  */
 bool NIKinect::init_image_generator(int index){
-	static xn::NodeInfoList depth_nodes;
+	static xn::NodeInfoList image_nodes;
 	XnStatus rc;
-	rc = this->_context.EnumerateProductionTrees (XN_NODE_TYPE_IMAGE, NULL, depth_nodes, NULL);
+	rc = this->_context->EnumerateProductionTrees (XN_NODE_TYPE_IMAGE, NULL, image_nodes, NULL);
 
 	int counter = 0;
-	for (xn::NodeInfoList::Iterator nodeIt =depth_nodes.Begin(); nodeIt != depth_nodes.End(); ++nodeIt, counter++) {
-		if(counter == index){
+	for (xn::NodeInfoList::Iterator nodeIt =image_nodes.Begin(); nodeIt != image_nodes.End(); ++nodeIt, counter++) {
+		if(counter == 0){
 			xn::NodeInfo info = *nodeIt;
 			const XnProductionNodeDescription& description = info.GetDescription();
-	
-			XnMapOutputMode mode;
-			mode.nXRes	= 640;
-			mode.nYRes	= 480;
-			mode.nFPS	= 30;
 
-			rc = this->_context.CreateProductionTree (info);
+			rc = this->_context->CreateProductionTree (info);
 
-			rc = info.GetInstance (this->_image_generator);
+			this->_image_generator = new xn::ImageGenerator();
+			rc = info.GetInstance (*this->_image_generator);
 		
 			if (rc != XN_STATUS_OK)
 			{
@@ -295,27 +304,27 @@ bool NIKinect::init_image_generator(int index){
 				this->_flags_processing[NIKinect::IMAGE_P] = true;
 			}
 
-			this->_image_generator.SetMapOutputMode(mode);
-			//this->_image_generator.GetMetaData(this->_image_md);
-			this->_image_generator.StartGenerating();
+			this->_image_generator->SetMapOutputMode(_image_mode);
+			//this->_image_generator->GetMetaData(this->_image_md);
+			this->_image_generator->StartGenerating();
 
 			break;
 		}
 	}
 
 	if(this->_flags[NIKinect::IMAGE_G]){
-		this->_image_generator.GetMetaData(this->_image_md);	
-		if(this->_flags[NIKinect::DEPTH_G]){
-			this->_depth_generator.GetAlternativeViewPointCap().SetViewPoint(this->_image_generator);
-		}
+		this->_image_generator->GetMetaData(this->_image_md);	
+		//if(this->_flags[NIKinect::DEPTH_G]){
+		//	this->_depth_generator->GetAlternativeViewPointCap().SetViewPoint(*this->_image_generator);
+		//}
 	}
 
 	//XnStatus rc;
-	//rc = _context.FindExistingNode(XN_NODE_TYPE_IMAGE,this->_image_generator);
+	//rc = _context->FindExistingNode(XN_NODE_TYPE_IMAGE,this->_image_generator);
 	////If the generator was already created, don't create it again.
 	//if (rc != XN_STATUS_OK)
 	//{
-	//	rc = _image_generator.Create(_context);
+	//	rc = _image_generator->Create(_context);
 
 	//	if (rc != XN_STATUS_OK)
 	//	{
@@ -334,8 +343,8 @@ bool NIKinect::init_image_generator(int index){
 	//}
 
 	//if(this->_flags[NIKinect::IMAGE_G]){
-	//	this->_image_generator.GetMetaData(this->_image_md);		
-	//	this->_depth_generator.GetAlternativeViewPointCap().SetViewPoint(this->_image_generator);
+	//	this->_image_generator->GetMetaData(this->_image_md);		
+	//	this->_depth_generator->GetAlternativeViewPointCap().SetViewPoint(this->_image_generator);
 	//}
 
 	return this->_flags[NIKinect::IMAGE_G];
@@ -350,15 +359,15 @@ bool NIKinect::init_image_generator(int index){
 bool NIKinect::init_scene_analyzer(int index){
 	static xn::NodeInfoList depth_nodes;
 	XnStatus rc;
-	rc = this->_context.EnumerateProductionTrees (XN_NODE_TYPE_SCENE, NULL, depth_nodes, NULL);
+	rc = this->_context->EnumerateProductionTrees (XN_NODE_TYPE_SCENE, NULL, depth_nodes, NULL);
 
 	int counter = 0;
 	for (xn::NodeInfoList::Iterator nodeIt =depth_nodes.Begin(); nodeIt != depth_nodes.End(); ++nodeIt, counter++) {
-		if(counter == index){
+		if(counter == 0){
 			xn::NodeInfo info = *nodeIt;
 			const XnProductionNodeDescription& description = info.GetDescription();
 
-			rc = this->_context.CreateProductionTree (info);
+			rc = this->_context->CreateProductionTree (info);
 
 			rc = info.GetInstance (this->_scene_analyzer);
 		
@@ -381,7 +390,7 @@ bool NIKinect::init_scene_analyzer(int index){
 	}
 
 	//XnStatus rc = 1;
-	////rc = _context.FindExistingNode(XN_NODE_TYPE_SCENE,this->_scene_analyzer);
+	////rc = _context->FindExistingNode(XN_NODE_TYPE_SCENE,this->_scene_analyzer);
 	////If the generator was already created, don't create it again.
 	//if (rc != XN_STATUS_OK)
 	//{
@@ -412,17 +421,17 @@ bool NIKinect::init_scene_analyzer(int index){
 bool NIKinect::init_user_generator(int index){
 	static xn::NodeInfoList depth_nodes;
 	XnStatus rc;
-	rc = this->_context.EnumerateProductionTrees (XN_NODE_TYPE_USER, NULL, depth_nodes, NULL);
+	rc = this->_context->EnumerateProductionTrees (XN_NODE_TYPE_USER, NULL, depth_nodes, NULL);
 
 	int counter = 0;
 	for (xn::NodeInfoList::Iterator nodeIt =depth_nodes.Begin(); nodeIt != depth_nodes.End(); ++nodeIt, counter++) {
-		if(counter == index){
+		if(counter == 0){
 			xn::NodeInfo info = *nodeIt;
 			const XnProductionNodeDescription& description = info.GetDescription();
 
-			rc = this->_context.CreateProductionTree (info);
+			rc = this->_context->CreateProductionTree (info);
 
-			rc = info.GetInstance (this->_scene_analyzer);
+			rc = info.GetInstance (this->_user_generator);
 		
 			if (rc != XN_STATUS_OK)
 			{
@@ -438,12 +447,8 @@ bool NIKinect::init_user_generator(int index){
 		}
 	}
 	
-	if(this->_flags[NIKinect::USER_G]){
-		this->_scene_analyzer.GetMetaData(this->_scene_md);
-	}
-
 	//XnStatus rc = 1;
-	//rc = _context.FindExistingNode(XN_NODE_TYPE_USER,this->_user_generator);
+	//rc = _context->FindExistingNode(XN_NODE_TYPE_USER,this->_user_generator);
 	////If the generator was already created, don't create it again.
 	//if (rc != XN_STATUS_OK)
 	//{
@@ -491,7 +496,7 @@ bool NIKinect::update(){
 bool NIKinect::update_images(){
 	//Updates Depth Variables
 	if(this->_flags[NIKinect::DEPTH_G]){
-		this->_depth_generator.GetMetaData(this->_depth_md);
+		this->_depth_generator->GetMetaData(this->_depth_md);
 
 		if(this->_flags_processing[NIKinect::DEPTH_P]){
 			cv::Mat depthMat16UC1(480, 640,CV_16UC1, (void*) this->_depth_md.Data());
@@ -514,10 +519,10 @@ bool NIKinect::update_images(){
 
 	//Updates Image Variables
 	if(this->_flags[NIKinect::IMAGE_G]){
-		this->_image_generator.GetMetaData(_image_md);
+		this->_image_generator->GetMetaData(_image_md);
 
 		if(this->_flags_processing[NIKinect::IMAGE_P]){
-			cv::Mat color_temp(480,640,CV_8UC3,(void*) _image_md.Data());
+			cv::Mat color_temp(_image_mode.nYRes,_image_mode.nXRes,CV_8UC3,(void*) _image_md.Data());
 			cv::cvtColor(color_temp,_color_mat,CV_RGB2BGR);
 		}
 	}
@@ -544,7 +549,8 @@ bool NIKinect::update_images(){
  */
 bool NIKinect::update_openni(){
 	XnStatus rc;
-	rc = _context.WaitAnyUpdateAll();
+	//rc = this->_image_generator->WaitAndUpdateData();//_context->WaitAndUpdateAll();
+	rc = _context->WaitAndUpdateAll();
 
 	if (rc != XN_STATUS_OK)
 	{
@@ -552,6 +558,15 @@ bool NIKinect::update_openni(){
 		//break;
 		return false;
 	}
+
+	//rc = this->_depth_generator->WaitAndUpdateData();//_context->WaitAndUpdateAll();
+
+	//if (rc != XN_STATUS_OK)
+	//{
+	//	printf("Read failed: %s\n", xnGetStatusString(rc));
+	//	//break;
+	//	return false;
+	//}
 
 	return true;
 }
@@ -578,7 +593,7 @@ void NIKinect::generate_point_cloud(){
 		}
 	} 
 	//int n = ;
-	_depth_generator.ConvertProjectiveToRealWorld((XN_VGA_Y_RES*XN_VGA_X_RES) / (float)(_point_step*_point_step), this->_point_2d, this->_point_3d);
+	_depth_generator->ConvertProjectiveToRealWorld((XN_VGA_Y_RES*XN_VGA_X_RES) / (float)(_point_step*_point_step), this->_point_2d, this->_point_3d);
 }
 
 /**
@@ -602,7 +617,7 @@ bool NIKinect::convert_to_realworld(int count, XnPoint3D* points_in, XnPoint3D* 
 	if(!points_out) 
 		points_out = (XnPoint3D*)malloc(sizeof(XnPoint3D) * count);
 
-	XnStatus result = this->_depth_generator.ConvertProjectiveToRealWorld(count,points_in,points_out);
+	XnStatus result = this->_depth_generator->ConvertProjectiveToRealWorld(count,points_in,points_out);
 
 	return result == XN_STATUS_OK;
 }
@@ -661,7 +676,7 @@ bool NIKinect::convert_to_realworld(cv::Mat mask, XnPoint3D* points_out, int min
 		}
 	}
 
-	XnStatus result = this->_depth_generator.ConvertProjectiveToRealWorld(n_points,points_in,points_out);
+	XnStatus result = this->_depth_generator->ConvertProjectiveToRealWorld(n_points,points_in,points_out);
 
 	return result == XN_STATUS_OK;
 }
@@ -828,7 +843,7 @@ double NIKinect::get_frame_rate(){
  * @brief	Access to the current NI Context.
  * @return	The NI Context.
  */
-xn::Context& NIKinect::get_context(){
+xn::Context* NIKinect::get_context(){
 	return this->_context;
 }
 
@@ -836,7 +851,7 @@ xn::Context& NIKinect::get_context(){
  * @brief	Access to the Depth Generator.
  * @return	The Depth Generator.
  */
-xn::DepthGenerator& NIKinect::get_depth_generator(){
+xn::DepthGenerator* NIKinect::get_depth_generator(){
 	return this->_depth_generator;
 }
 
@@ -844,7 +859,7 @@ xn::DepthGenerator& NIKinect::get_depth_generator(){
  * @brief	Access to the Image Generator.
  * @return	The Image Generator.
  */
-xn::ImageGenerator& NIKinect::get_image_generator(){
+xn::ImageGenerator* NIKinect::get_image_generator(){
 	return this->_image_generator;
 }
 
