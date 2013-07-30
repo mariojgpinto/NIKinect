@@ -90,7 +90,7 @@ class __declspec(dllexport) NIKinect{
 		~NIKinect();
 
 		//Setup
-		bool init(const char* file = 0, int generators = DEPTH_G + IMAGE_G);
+		bool init(const char* file = 0, int n_kinect = 0, int generators = DEPTH_G + IMAGE_G);
 		void set_min_depth(int milimeters);
 		void set_max_depth(int milimeters);
 		void set_processing_flag(NIKinect::PROCESSING flag, bool value);
@@ -158,16 +158,16 @@ class __declspec(dllexport) NIKinect{
 		bool init_from_xml_file(const char* file = 0);
 		void flag_re_check();
 
-		bool init_depth_generator();
-		bool init_image_generator();
+		bool init_depth_generator(int index = 0);
+		bool init_image_generator(int index = 0);
 		bool init_ir_generator();
 		bool init_audio_generator();
 		
-		bool init_user_generator();
+		bool init_user_generator(int index = 0);
 		bool init_gesture_generator();
 		bool init_hand_generator();
 		
-		bool init_scene_analyzer();
+		bool init_scene_analyzer(int index = 0);
 
 		virtual void generate_point_cloud();
 

@@ -56,9 +56,10 @@ NIKinect::~NIKinect(){
 /** 
  * @brief	NIKinect Initializer.
  *
- * @todo	Init from file_xml
+ * @todo	Init from file_xml.
+ * @todo	Validation of number of nodes.
  */
-bool NIKinect::init(const char* file, int generators){
+bool NIKinect::init(const char* file, int n_kinect, int generators){
 	XnStatus rc;
 
 	rc = this->_context.Init();
@@ -86,10 +87,10 @@ bool NIKinect::init(const char* file, int generators){
 			int power = pow(2.0,i);
 			switch(power){
 				case NIKinect::DEPTH_G:
-					ac += (this->init_depth_generator()) ? 0 : NIKinect::DEPTH_G;
+					ac += (this->init_depth_generator(n_kinect)) ? 0 : NIKinect::DEPTH_G;
 					break;
 				case NIKinect::IMAGE_G:
- 					ac += (this->init_image_generator()) ? 0 : NIKinect::IMAGE_G;
+ 					ac += (this->init_image_generator(n_kinect)) ? 0 : NIKinect::IMAGE_G;
 					break;
 				//case NIKinect::IR_G:
 				//	ac += (this->init_ir_generator()) ? 0 : NIKinect::IR_G;
@@ -98,7 +99,7 @@ bool NIKinect::init(const char* file, int generators){
 				//	ac += (this->init_audio_generator()) ? 0 : NIKinect::AUDIO_G;
 				//	break;
 				case NIKinect::USER_G:
-					ac += (this->init_user_generator()) ? 0 : NIKinect::USER_G;
+					ac += (this->init_user_generator(n_kinect)) ? 0 : NIKinect::USER_G;
 					break;
 				//case NIKinect::GESTURE_G:
 				//	ac += (this->init_gesture_generator()) ? 0 : NIKinect::GESTURE_G;
@@ -107,7 +108,7 @@ bool NIKinect::init(const char* file, int generators){
 				//	ac += (this->init_hand_generator()) ? 0 : NIKinect::HAND_G;
 				//	break;
 				case NIKinect::SCENE_A:
-					ac += (this->init_scene_analyzer()) ? 0 : NIKinect::SCENE_A;
+					ac += (this->init_scene_analyzer(n_kinect)) ? 0 : NIKinect::SCENE_A;
 					break;
 				default: break;
 			}
@@ -178,49 +179,55 @@ void NIKinect::set_3d_analysis_step(int step){
  * @retval	true if the generator was successfully created.
  * @retval	false if some error occurred.
  */
-bool NIKinect::init_depth_generator(){
+bool NIKinect::init_depth_generator(int index){
 	static xn::NodeInfoList depth_nodes;
 	XnStatus rc;
 	rc = this->_context.EnumerateProductionTrees (XN_NODE_TYPE_DEPTH, NULL, depth_nodes, NULL);
 
-	int idx = 2;
 	int counter = 0;
 	for (xn::NodeInfoList::Iterator nodeIt =depth_nodes.Begin(); nodeIt != depth_nodes.End(); ++nodeIt, counter++) {
-		if(counter == idx){
-		xn::NodeInfo info = *nodeIt;
-		const XnProductionNodeDescription& description = info.GetDescription();
+		if(counter == index){
+			xn::NodeInfo info = *nodeIt;
+			const XnProductionNodeDescription& description = info.GetDescription();
 	
-		XnMapOutputMode mode;
-		mode.nXRes	= 640;
-		mode.nYRes	= 480;
-		mode.nFPS	= 30;
+			XnMapOutputMode mode;
+			mode.nXRes	= 640;
+			mode.nYRes	= 480;
+			mode.nFPS	= 30;
 
-		rc = this->_context.CreateProductionTree (info);
+			rc = this->_context.CreateProductionTree (info);
 		
-		this->_depth_generator;// = new xn::DepthGenerator();
-		//DepthMetaData* g_depthMD = new DepthMetaData();
+			this->_depth_generator;// = new xn::DepthGenerator();
+			//DepthMetaData* g_depthMD = new DepthMetaData();
 
-		rc = info.GetInstance (this->_depth_generator);
+			rc = info.GetInstance (this->_depth_generator);
 		
-		if (rc != XN_STATUS_OK)
-		{
-			printf("The Depth Node could not be created.%s\n",xnGetStatusString(rc));
-			this->_flags[NIKinect::DEPTH_G] = false;
-			this->_flags_processing[NIKinect::DEPTH_P] = false;
-			this->_flags_processing[NIKinect::MASK_P] = false;
+			if (rc != XN_STATUS_OK)
+			{
+				printf("The Depth Node could not be created.%s\n",xnGetStatusString(rc));
+				this->_flags[NIKinect::DEPTH_G] = false;
+				this->_flags_processing[NIKinect::DEPTH_P] = false;
+				this->_flags_processing[NIKinect::MASK_P] = false;
 
-		}
-		else{
-			this->_flags[NIKinect::DEPTH_G] = true;
-			this->_flags_processing[NIKinect::DEPTH_P] = true;
-			this->_flags_processing[NIKinect::MASK_P] = true;
-		}
+			}
+			else{
+				this->_flags[NIKinect::DEPTH_G] = true;
+				this->_flags_processing[NIKinect::DEPTH_P] = true;
+				this->_flags_processing[NIKinect::MASK_P] = true;
+			}
 
-		this->_depth_generator.SetMapOutputMode(mode);
-		this->_depth_generator.GetMetaData(this->_depth_md);
-		this->_depth_generator.StartGenerating();
+			this->_depth_generator.SetMapOutputMode(mode);
+			//this->_depth_generator.GetMetaData(this->_depth_md);
+			this->_depth_generator.StartGenerating();
+
+			break;
 		}
 	}
+
+	if(this->_flags[NIKinect::DEPTH_G]){
+		this->_depth_generator.GetMetaData(this->_depth_md);
+	}
+
 	//rc = _context.FindExistingNode(XN_NODE_TYPE_DEPTH,this->_depth_generator);
 	////If the generator was already created, don't create it again.
 	//if (rc != XN_STATUS_OK)
@@ -247,10 +254,6 @@ bool NIKinect::init_depth_generator(){
 	//	this->_flags_processing[NIKinect::MASK_P] = true;
 	//}
 
-	if(this->_flags[NIKinect::DEPTH_G]){
-		this->_depth_generator.GetMetaData(this->_depth_md);
-	}
-
 	return this->_flags[NIKinect::DEPTH_G];
 }
 
@@ -260,34 +263,80 @@ bool NIKinect::init_depth_generator(){
  * @retval	true if the generator was successfully created.
  * @retval	false if some error occurred.
  */
-bool NIKinect::init_image_generator(){
+bool NIKinect::init_image_generator(int index){
+	static xn::NodeInfoList depth_nodes;
 	XnStatus rc;
-	rc = _context.FindExistingNode(XN_NODE_TYPE_IMAGE,this->_image_generator);
-	//If the generator was already created, don't create it again.
-	if (rc != XN_STATUS_OK)
-	{
-		rc = _image_generator.Create(_context);
+	rc = this->_context.EnumerateProductionTrees (XN_NODE_TYPE_IMAGE, NULL, depth_nodes, NULL);
 
-		if (rc != XN_STATUS_OK)
-		{
-			printf("The Image Node could not be created.%s\n",xnGetStatusString(rc));
-			this->_flags[NIKinect::IMAGE_G] = false;
-			this->_flags_processing[NIKinect::IMAGE_P] = false;
+	int counter = 0;
+	for (xn::NodeInfoList::Iterator nodeIt =depth_nodes.Begin(); nodeIt != depth_nodes.End(); ++nodeIt, counter++) {
+		if(counter == index){
+			xn::NodeInfo info = *nodeIt;
+			const XnProductionNodeDescription& description = info.GetDescription();
+	
+			XnMapOutputMode mode;
+			mode.nXRes	= 640;
+			mode.nYRes	= 480;
+			mode.nFPS	= 30;
+
+			rc = this->_context.CreateProductionTree (info);
+
+			rc = info.GetInstance (this->_image_generator);
+		
+			if (rc != XN_STATUS_OK)
+			{
+				printf("The Depth Node could not be created.%s\n",xnGetStatusString(rc));
+				this->_flags[NIKinect::IMAGE_G] = false;
+				this->_flags_processing[NIKinect::IMAGE_P] = false;
+
+			}
+			else{
+				this->_flags[NIKinect::IMAGE_G] = true;
+				this->_flags_processing[NIKinect::IMAGE_P] = true;
+			}
+
+			this->_image_generator.SetMapOutputMode(mode);
+			//this->_image_generator.GetMetaData(this->_image_md);
+			this->_image_generator.StartGenerating();
+
+			break;
 		}
-		else{
-			this->_flags[NIKinect::IMAGE_G] = true;
-			this->_flags_processing[NIKinect::IMAGE_P] = true;
-		}
-	}
-	else{
-		this->_flags[NIKinect::IMAGE_G] = true;
-		this->_flags_processing[NIKinect::IMAGE_P] = true;
 	}
 
 	if(this->_flags[NIKinect::IMAGE_G]){
-		this->_image_generator.GetMetaData(this->_image_md);		
-		this->_depth_generator.GetAlternativeViewPointCap().SetViewPoint(this->_image_generator);
+		this->_image_generator.GetMetaData(this->_image_md);	
+		if(this->_flags[NIKinect::DEPTH_G]){
+			this->_depth_generator.GetAlternativeViewPointCap().SetViewPoint(this->_image_generator);
+		}
 	}
+
+	//XnStatus rc;
+	//rc = _context.FindExistingNode(XN_NODE_TYPE_IMAGE,this->_image_generator);
+	////If the generator was already created, don't create it again.
+	//if (rc != XN_STATUS_OK)
+	//{
+	//	rc = _image_generator.Create(_context);
+
+	//	if (rc != XN_STATUS_OK)
+	//	{
+	//		printf("The Image Node could not be created.%s\n",xnGetStatusString(rc));
+	//		this->_flags[NIKinect::IMAGE_G] = false;
+	//		this->_flags_processing[NIKinect::IMAGE_P] = false;
+	//	}
+	//	else{
+	//		this->_flags[NIKinect::IMAGE_G] = true;
+	//		this->_flags_processing[NIKinect::IMAGE_P] = true;
+	//	}
+	//}
+	//else{
+	//	this->_flags[NIKinect::IMAGE_G] = true;
+	//	this->_flags_processing[NIKinect::IMAGE_P] = true;
+	//}
+
+	//if(this->_flags[NIKinect::IMAGE_G]){
+	//	this->_image_generator.GetMetaData(this->_image_md);		
+	//	this->_depth_generator.GetAlternativeViewPointCap().SetViewPoint(this->_image_generator);
+	//}
 
 	return this->_flags[NIKinect::IMAGE_G];
 }
@@ -298,31 +347,59 @@ bool NIKinect::init_image_generator(){
  * @retval	true if the Scene Analyzer was successfully created.
  * @retval	false if some error occurred.
  */
-bool NIKinect::init_scene_analyzer(){
-	XnStatus rc = 1;
-	//rc = _context.FindExistingNode(XN_NODE_TYPE_SCENE,this->_scene_analyzer);
-	//If the generator was already created, don't create it again.
-	if (rc != XN_STATUS_OK)
-	{
-		rc = _scene_analyzer.Create(_context);
+bool NIKinect::init_scene_analyzer(int index){
+	static xn::NodeInfoList depth_nodes;
+	XnStatus rc;
+	rc = this->_context.EnumerateProductionTrees (XN_NODE_TYPE_SCENE, NULL, depth_nodes, NULL);
 
-		if (rc != XN_STATUS_OK)
-		{
-			printf("The Scene Analyzer Node could not be created.%s\n",xnGetStatusString(rc));
-			this->_flags[NIKinect::SCENE_A] = false;
-		}
-		else{
-			this->_flags[NIKinect::SCENE_A] = true;
+	int counter = 0;
+	for (xn::NodeInfoList::Iterator nodeIt =depth_nodes.Begin(); nodeIt != depth_nodes.End(); ++nodeIt, counter++) {
+		if(counter == index){
+			xn::NodeInfo info = *nodeIt;
+			const XnProductionNodeDescription& description = info.GetDescription();
+
+			rc = this->_context.CreateProductionTree (info);
+
+			rc = info.GetInstance (this->_scene_analyzer);
+		
+			if (rc != XN_STATUS_OK)
+			{
+				printf("The Depth Node could not be created.%s\n",xnGetStatusString(rc));
+				this->_flags[NIKinect::SCENE_A] = false;
+
+			}
+			else{
+				this->_flags[NIKinect::SCENE_A] = true;
+			}
+
+			break;
 		}
 	}
-	else{
-		this->_flags[NIKinect::SCENE_A] = true;
-	}
-
+	
 	if(this->_flags[NIKinect::SCENE_A]){
 		this->_scene_analyzer.GetMetaData(this->_scene_md);
 	}
 
+	//XnStatus rc = 1;
+	////rc = _context.FindExistingNode(XN_NODE_TYPE_SCENE,this->_scene_analyzer);
+	////If the generator was already created, don't create it again.
+	//if (rc != XN_STATUS_OK)
+	//{
+	//	rc = _scene_analyzer.Create(_context);
+
+	//	if (rc != XN_STATUS_OK)
+	//	{
+	//		printf("The Scene Analyzer Node could not be created.%s\n",xnGetStatusString(rc));
+	//		this->_flags[NIKinect::SCENE_A] = false;
+	//	}
+	//	else{
+	//		this->_flags[NIKinect::SCENE_A] = true;
+	//	}
+	//}
+	//else{
+	//	this->_flags[NIKinect::SCENE_A] = true;
+	//}
+	
 	return this->_flags[NIKinect::SCENE_A];
 }
 
@@ -332,26 +409,58 @@ bool NIKinect::init_scene_analyzer(){
  * @retval	true if the User Generator was successfully created.
  * @retval	false if some error occurred.
  */
-bool NIKinect::init_user_generator(){
-	XnStatus rc = 1;
-	rc = _context.FindExistingNode(XN_NODE_TYPE_USER,this->_user_generator);
-	//If the generator was already created, don't create it again.
-	if (rc != XN_STATUS_OK)
-	{
-		rc = _user_generator.Create(_context);
+bool NIKinect::init_user_generator(int index){
+	static xn::NodeInfoList depth_nodes;
+	XnStatus rc;
+	rc = this->_context.EnumerateProductionTrees (XN_NODE_TYPE_USER, NULL, depth_nodes, NULL);
 
-		if (rc != XN_STATUS_OK)
-		{
-			printf("The Scene Analyzer Node could not be created.%s\n",xnGetStatusString(rc));
-			this->_flags[NIKinect::USER_G] = false;
-		}
-		else{
-			this->_flags[NIKinect::USER_G] = true;
+	int counter = 0;
+	for (xn::NodeInfoList::Iterator nodeIt =depth_nodes.Begin(); nodeIt != depth_nodes.End(); ++nodeIt, counter++) {
+		if(counter == index){
+			xn::NodeInfo info = *nodeIt;
+			const XnProductionNodeDescription& description = info.GetDescription();
+
+			rc = this->_context.CreateProductionTree (info);
+
+			rc = info.GetInstance (this->_scene_analyzer);
+		
+			if (rc != XN_STATUS_OK)
+			{
+				printf("The Depth Node could not be created.%s\n",xnGetStatusString(rc));
+				this->_flags[NIKinect::USER_G] = false;
+
+			}
+			else{
+				this->_flags[NIKinect::USER_G] = true;
+			}
+
+			break;
 		}
 	}
-	else{
-		this->_flags[NIKinect::USER_G] = true;
+	
+	if(this->_flags[NIKinect::USER_G]){
+		this->_scene_analyzer.GetMetaData(this->_scene_md);
 	}
+
+	//XnStatus rc = 1;
+	//rc = _context.FindExistingNode(XN_NODE_TYPE_USER,this->_user_generator);
+	////If the generator was already created, don't create it again.
+	//if (rc != XN_STATUS_OK)
+	//{
+	//	rc = _user_generator.Create(_context);
+
+	//	if (rc != XN_STATUS_OK)
+	//	{
+	//		printf("The Scene Analyzer Node could not be created.%s\n",xnGetStatusString(rc));
+	//		this->_flags[NIKinect::USER_G] = false;
+	//	}
+	//	else{
+	//		this->_flags[NIKinect::USER_G] = true;
+	//	}
+	//}
+	//else{
+	//	this->_flags[NIKinect::USER_G] = true;
+	//}
 
 	return this->_flags[NIKinect::USER_G];
 }
