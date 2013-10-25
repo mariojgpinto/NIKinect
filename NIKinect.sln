@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "QNIKinect", "QNIKinect\QNIK
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NIThreadedKinect", "NIThreadedKinect\NIThreadedKinect.vcxproj", "{C513A8CD-FE8F-45BD-B77C-525C0BBA1417}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NIKinect2", "NIKinect2\NIKinect2.vcxproj", "{FAA3AA1C-3AB9-4AFB-863A-92D68BC825A2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -40,6 +42,12 @@ Global
 		{C513A8CD-FE8F-45BD-B77C-525C0BBA1417}.Release|Win32.Build.0 = Release|Win32
 		{C513A8CD-FE8F-45BD-B77C-525C0BBA1417}.StaticDebug|Win32.ActiveCfg = Debug|Win32
 		{C513A8CD-FE8F-45BD-B77C-525C0BBA1417}.StaticDebug|Win32.Build.0 = Debug|Win32
+		{FAA3AA1C-3AB9-4AFB-863A-92D68BC825A2}.Debug|Win32.ActiveCfg = Debug|Win32
+		{FAA3AA1C-3AB9-4AFB-863A-92D68BC825A2}.Debug|Win32.Build.0 = Debug|Win32
+		{FAA3AA1C-3AB9-4AFB-863A-92D68BC825A2}.Release|Win32.ActiveCfg = Release|Win32
+		{FAA3AA1C-3AB9-4AFB-863A-92D68BC825A2}.Release|Win32.Build.0 = Release|Win32
+		{FAA3AA1C-3AB9-4AFB-863A-92D68BC825A2}.StaticDebug|Win32.ActiveCfg = Debug|Win32
+		{FAA3AA1C-3AB9-4AFB-863A-92D68BC825A2}.StaticDebug|Win32.Build.0 = Debug|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
