@@ -18,9 +18,15 @@
     <ClInclude Include="NIKinect2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="NIKinect2Manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NIKinect2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NIKinect2Manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
