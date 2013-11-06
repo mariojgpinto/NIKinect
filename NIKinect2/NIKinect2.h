@@ -25,7 +25,8 @@
  * @brief	Wrapper for OpenNI2 to use Kinect.
  * @details	NIKinect2.
  *
- * @TODO	- Add Floor calc and plane retrieve
+ * @TODO	- Sync size between HD Color and Depth
+ *			- Add Floor calc and plane retrieve
  *			- Add Depth Control
  *			- Add Image Size Control (Update Generators)
  *			- Add 3D Convertion

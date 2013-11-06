@@ -668,7 +668,7 @@ bool NIKinect2::get_users_map(nite::UserMap& map){
  */
 bool NIKinect2::get_users_map(cv::Mat &map){
 	if(this->_flag_generators[NIKinect2::NI2_G_USER]){
-		cv::Mat depthMat16UC1_nite(480,640,CV_16UC1,(void*)this->_nite_user_map.getPixels());
+		cv::Mat depthMat16UC1_nite(this->_mode_depth.getResolutionY(),this->_mode_depth.getResolutionX(),CV_16UC1,(void*)this->_nite_user_map.getPixels());
 		depthMat16UC1_nite.convertTo(map, CV_8UC1);
 
 		return true;
