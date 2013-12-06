@@ -90,6 +90,9 @@ class __declspec(dllexport)NIKinect2{
 		bool get_user_data(int idx, nite::UserData& data);
 		bool get_user_mask(int idx, cv::Mat &mask);
 
+		bool calc_floor_plane();
+		nite::Plane* get_floor_plane();
+		bool get_floor_plane(double *aa, double *bb, double *cc, double *dd);
 
 		double get_frame_rate();
 
@@ -107,10 +110,10 @@ class __declspec(dllexport)NIKinect2{
 		nite::UserTracker*			get_user_tracker();
 		nite::UserTrackerFrameRef*	get_user_tracker_frame();
 
-	private:
-		//void init_variables();
+	//private:
+	//	//void init_variables();
 
-	private:
+	public:
 		static bool					_ni2_initialized;
 		static int					_ni2_n_streams;
 		static openni::VideoStream**_ni2_g_streams;
@@ -137,6 +140,9 @@ class __declspec(dllexport)NIKinect2{
 		std::vector<nite::UserData*>*	_users;
 		std::vector<int>*				_users_ids;
 		
+		//Floor Plane
+		bool _flag_plane;
+		nite::Plane *_floor_plane;
 
 		////Processing
 		//int _min_depth;

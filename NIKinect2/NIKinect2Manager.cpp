@@ -64,6 +64,25 @@ bool NIKinect2Manager::update_all(){
 	return true;
 }
 
+bool NIKinect2Manager::update_ni(){
+	if(!NIKinect2::ni_update()){
+		return false;
+	}
+}
+
+bool NIKinect2Manager::update_info(){
+	for(int i = 0 ; i < this->_kinects->size() ; ++i){
+		this->_kinects->at(i)->update();
+	}
+	return true;
+}
+
+void NIKinect2Manager::add_kinect(NIKinect2* kinect){
+	if(!kinect) return;
+
+	this->_kinects->push_back(kinect);
+}
+
 NIKinect2* NIKinect2Manager::get_kinect(int idx){
 	if(idx < this->_kinects->size() && idx >= 0){
 		return this->_kinects->at(idx);

@@ -19,6 +19,11 @@ class __declspec(dllexport)NIKinect2Manager{
 
 		bool update_all();
 
+		bool update_ni();
+		bool update_info();
+
+		void add_kinect(NIKinect2* kinect);
+
 		NIKinect2* get_kinect(int idx);
 		std::vector<NIKinect2*>* get_kinects();
 		

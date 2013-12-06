@@ -62,6 +62,9 @@ NIKinect2::NIKinect2(){
 	this->_mode_depth.setFps(30);
 	this->_mode_depth.setPixelFormat(openni::PixelFormat(ONI_PIXEL_FORMAT_DEPTH_1_MM));
 	this->_mode_depth.setResolution(640,480);
+
+	this->_flag_plane = false;
+	this->_floor_plane = new nite::Plane();
 }
 
 /**
@@ -545,6 +548,7 @@ bool NIKinect2::update_nite(){
 	for(int i = 0 ; i < users.getSize() ; ++i){
 		if(users[i].isVisible()){
 			this->_users->push_back(new nite::UserData(users[i]));
+
 			this->_users_ids->push_back(users[i].getId());
 		}
 	}
@@ -553,6 +557,29 @@ bool NIKinect2::update_nite(){
 	this->_nite_user_map = (const nite::UserMap&)this->_nite_user_tracker_frame->getUserMap();
 
 	return true;
+}
+
+bool NIKinect2::calc_floor_plane(){
+	if(this->_flag_plane) return true;
+
+	if(this->_flag_generators[NIKinect2::NI2_G_USER]){
+		nite::Plane plane = this->_nite_user_tracker_frame->getFloor();
+
+		if(plane.normal.x != 0 || plane.normal.y != 0 || plane.normal.z != 0 ){
+			this->_floor_plane->normal = plane.normal;
+			this->_floor_plane->point = plane.point;
+
+			this->_flag_plane = true;
+		}
+		else{
+			NI2_PRINT_ERROR("calc_floor_plane","Couldn't get Floor from User Tracker.");
+		}
+	}
+	else{
+		NI2_PRINT_ERROR("calc_floor_plane","User Generator not initialized. Please initialize it.");
+	}
+
+	return this->_flag_plane;
 }
 
 //-----------------------------------------------------------------------------
@@ -701,13 +728,13 @@ bool NIKinect2::get_user_data(int idx, nite::UserData& data){
 	if(!this->_flag_generators[NIKinect2::NI2_G_USER])
 		return false;
 	
-	const nite::UserData* data_ptr = this->_nite_user_tracker_frame->getUserById(idx);
+	//const nite::UserData* data_ptr = this->_nite_user_tracker_frame->getUserById(idx);
+	if(idx >= this->_users->size())
+		return false;
 
-	if(data_ptr){
-		data = *data_ptr;
-		return true;
-	}
-	return false;
+	data = *(new nite::UserData(*this->_users->at(idx)));
+	
+	return true;
 }
 
 /**
@@ -805,4 +832,29 @@ nite::UserTracker* NIKinect2::get_user_tracker(){
  */
 nite::UserTrackerFrameRef* NIKinect2::get_user_tracker_frame(){
 	return this->_nite_user_tracker_frame;
+}
+
+/**
+ * @brief	get_floor_plane.
+ * @details	get_floor_plane.
+ */
+nite::Plane* NIKinect2::get_floor_plane(){
+	return (this->_flag_plane) ? this->_floor_plane : NULL;
+}
+
+/**
+ * @brief	get_floor_plane(double &aa, double &bb, double &cc, double &dd).
+ * @details	get_floor_plane(double &aa, double &bb, double &cc, double &dd).
+ */
+bool NIKinect2::get_floor_plane(double *aa, double *bb, double *cc, double *dd){
+	if(!_flag_plane) return false;
+
+	*aa = this->_floor_plane->normal.x;
+	*bb = this->_floor_plane->normal.y;
+	*cc = this->_floor_plane->normal.z;
+	*dd = -(this->_floor_plane->normal.x*this->_floor_plane->point.x + 
+			this->_floor_plane->normal.y*this->_floor_plane->point.y + 
+			this->_floor_plane->normal.z*this->_floor_plane->point.z);
+
+	return true;
 }
