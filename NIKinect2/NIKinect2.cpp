@@ -138,6 +138,16 @@ void NIKinect2::ni_shutdown(){
 	openni::OpenNI::shutdown();
 }
 
+/**
+ * @brief	NIKinect2::distanceToPlane(float pt_x, float pt_y, float pt_z, float a, float b, float c, float d).
+ * @details	NIKinect2::distanceToPlane(float pt_x, float pt_y, float pt_z, float a, float b, float c, float d).
+ */
+float NIKinect2::distance_to_plane(float pt_x, float pt_y, float pt_z, float a, float b, float c, float d){
+	float v = a*pt_x + b*pt_y + c*pt_z + d;
+	v /= sqrt(a*a+b*b+c*c);
+	return std::abs(v);
+}
+
 //-----------------------------------------------------------------------------
 // SETUP
 //-----------------------------------------------------------------------------
@@ -569,6 +579,13 @@ bool NIKinect2::calc_floor_plane(){
 			this->_floor_plane->normal = plane.normal;
 			this->_floor_plane->point = plane.point;
 
+			this->_floor_plane_a =	this->_floor_plane->normal.x;
+			this->_floor_plane_b =	this->_floor_plane->normal.y;
+			this->_floor_plane_c =	this->_floor_plane->normal.z;
+			this->_floor_plane_d = -(this->_floor_plane->normal.x*this->_floor_plane->point.x + 
+									this->_floor_plane->normal.y*this->_floor_plane->point.y + 
+									this->_floor_plane->normal.z*this->_floor_plane->point.z);
+
 			this->_flag_plane = true;
 		}
 		else{
@@ -849,12 +866,43 @@ nite::Plane* NIKinect2::get_floor_plane(){
 bool NIKinect2::get_floor_plane(double *aa, double *bb, double *cc, double *dd){
 	if(!_flag_plane) return false;
 
-	*aa = this->_floor_plane->normal.x;
-	*bb = this->_floor_plane->normal.y;
-	*cc = this->_floor_plane->normal.z;
-	*dd = -(this->_floor_plane->normal.x*this->_floor_plane->point.x + 
-			this->_floor_plane->normal.y*this->_floor_plane->point.y + 
-			this->_floor_plane->normal.z*this->_floor_plane->point.z);
+	*aa = this->_floor_plane_a;
+	*bb = this->_floor_plane_b;
+	*cc = this->_floor_plane_c;
+	*dd = this->_floor_plane_d;
 
 	return true;
+}
+
+/**
+ * @brief	get_floor_mask(cv::Mat &out_mask, double thresh).
+ * @details	get_floor_mask(cv::Mat &out_mask, double thresh).
+ */
+bool NIKinect2::get_floor_mask(cv::Mat &out_mask, double thresh){
+	if(!this->_flag_plane) return false;
+
+	out_mask = cv::Mat::zeros(480,640,CV_8UC1);
+
+	uint16_t* ptr = (uint16_t*)this->_frame_depth->getData();
+	uint8_t* ptr_out = (uint8_t*)out_mask.data;
+
+	float d_x = 0;	float d_y = 0;	float d_z = 0;
+	float w_x = 0;	float w_y = 0;	float w_z = 0;	
+
+	for(int y=0; y<480; y++) { 
+		for(int x=0; x<640; x++) {
+			d_x = x;	d_y = y;	d_z =  ptr[y * 640 + x];
+			w_x = 0;	w_y = 0;	w_z = 0;
+
+			openni::CoordinateConverter::convertDepthToWorld(*this->_g_depth,d_x,d_y,d_z,&w_x,&w_y,&w_z);
+
+			float dist = NIKinect2::distance_to_plane(w_x,w_y,w_z,	this->_floor_plane_a,
+																	this->_floor_plane_b,
+																	this->_floor_plane_c,
+																	this->_floor_plane_d);
+			if(dist > thresh){
+				ptr_out[y * 640 + x] = 255;
+			}
+		}
+	}
 }

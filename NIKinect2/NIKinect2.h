@@ -93,6 +93,9 @@ class __declspec(dllexport)NIKinect2{
 		bool calc_floor_plane();
 		nite::Plane* get_floor_plane();
 		bool get_floor_plane(double *aa, double *bb, double *cc, double *dd);
+		bool get_floor_mask(cv::Mat &out_mask, double thresh = 0.2);
+
+		bool calc_top_view();
 
 		double get_frame_rate();
 
@@ -119,6 +122,8 @@ class __declspec(dllexport)NIKinect2{
 		static openni::VideoStream**_ni2_g_streams;
 		static int					_ni2_active_streams;
 
+		static float distance_to_plane(float pt_x, float pt_y, float pt_z, float a, float b, float c, float d);
+
 	private:
 		bool _flag_generators[NIKinect2::_n_generators];
 
@@ -143,6 +148,14 @@ class __declspec(dllexport)NIKinect2{
 		//Floor Plane
 		bool _flag_plane;
 		nite::Plane *_floor_plane;
+		double _floor_plane_a;
+		double _floor_plane_b;
+		double _floor_plane_c;
+		double _floor_plane_d;
+		
+		//TopView
+		bool _flag_top_view;
+
 
 		////Processing
 		//int _min_depth;
