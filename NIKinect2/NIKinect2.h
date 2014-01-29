@@ -42,16 +42,17 @@ class __declspec(dllexport)NIKinect2{
 			NI2_G_DEPTH = 0,
 			NI2_G_COLOR = 1,
 			NI2_G_IR = 2,
-			NI2_G_USER = 3
+			NI2_G_USER = 3,
+			NI2_G_GESTURES = 4
 		};
-		static const int _n_generators = 4;
+		static const int _n_generators = 5;
 
 		static const int _max_users = 16;
 
 	public:
 		NIKinect2();
 		~NIKinect2();
-
+		float xx[2],yy[2],zz[2];
 		static bool ni_initialize();
 		static bool ni_update();
 		static void ni_shutdown();
@@ -61,16 +62,18 @@ class __declspec(dllexport)NIKinect2{
 		bool set_depth_color_registration(bool enable);
 
 		bool set_color_hd(bool enable);
-
+		
 		bool enable_depth_generator();
 		bool enable_color_generator();
 		bool enable_ir_generator();
 		bool enable_user_generator();
+		bool enable_hand_tracker();
 
 		bool disable_depth_generator();
 		bool disable_color_generator();
 		bool disable_ir_generator();
 		bool disable_user_generator();
+		bool disable_hand_tracker();
 
 		bool update();
 		bool update_images();
@@ -78,8 +81,15 @@ class __declspec(dllexport)NIKinect2{
 
 		bool get_depth_16(cv::Mat &depth);
 		bool get_depth_8(cv::Mat &depth);
+		bool get_ir(cv::Mat &ir);
 		bool get_mask(cv::Mat &mask);
 		bool get_color(cv::Mat &color);
+
+		bool is_color_hd();
+
+		bool convert_depth_to_3d(float in_xx, float in_yy, float in_zz, float *out_xx, float *out_yy, float *out_zz);
+		bool convert_3d_to_depth(float in_xx, float in_yy, float in_zz, float *out_xx, float *out_yy, float *out_zz);
+
 
 		//NITE
 		bool get_users_map(nite::UserMap &map);
@@ -98,6 +108,7 @@ class __declspec(dllexport)NIKinect2{
 		bool calc_top_view();
 
 		double get_frame_rate();
+
 
 	public:
 		//OpenNI Direct Access
@@ -144,6 +155,10 @@ class __declspec(dllexport)NIKinect2{
 		nite::UserMap					_nite_user_map;
 		std::vector<nite::UserData*>*	_users;
 		std::vector<int>*				_users_ids;
+
+		nite::HandTracker*				_nite_hand_tracker;
+		nite::HandTrackerFrameRef*		_nite_hand_tracker_frame;
+		nite::HandId					_nite_hand_id;
 		
 		//Floor Plane
 		bool _flag_plane;
@@ -167,6 +182,7 @@ class __declspec(dllexport)NIKinect2{
 
 		cv::Mat _depth_mat_16;
 		cv::Mat _depth_mat_8;
+		cv::Mat _ir_mat;
 		cv::Mat _color_mat;
 		cv::Mat _mask_mat;
 

@@ -40,6 +40,9 @@
     <Import Project="..\..\..\PropertySheets\EIGEN.props" />
     <Import Project="..\..\..\PropertySheets\EIGEN_DEBUG.props" />
     <Import Project="..\..\..\PropertySheets\PCL_DEBUG.props" />
+    <Import Project="..\..\..\PropertySheets\OPENNI2.props" />
+    <Import Project="..\..\..\PropertySheets\NITE2.props" />
+    <Import Project="..\..\..\PropertySheets\NIKINECT2.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -49,6 +52,9 @@
     <Import Project="..\..\..\PropertySheets\BOOST.props" />
     <Import Project="..\..\..\PropertySheets\PCL.props" />
     <Import Project="..\..\..\PropertySheets\EIGEN.props" />
+    <Import Project="..\..\..\PropertySheets\OPENNI2.props" />
+    <Import Project="..\..\..\PropertySheets\NITE2.props" />
+    <Import Project="..\..\..\PropertySheets\NIKINECT2.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -95,6 +101,9 @@
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\NIKinect2\NIKinect2.vcxproj">
+      <Project>{faa3aa1c-3ab9-4afb-863a-92d68bc825a2}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\NIKinect\NIKinect.vcxproj">
       <Project>{6944f82a-616d-4e60-a94e-21229ce98c6d}</Project>
     </ProjectReference>

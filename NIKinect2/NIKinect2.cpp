@@ -22,10 +22,15 @@ int NIKinect2::_ni2_active_streams = 0;
  * @details	Constructor.
  */
 NIKinect2::NIKinect2(){
+	this->xx[0] = 0;
+	this->yy[0] = 0;
+	this->xx[1] = 0;
+	this->yy[1] = 0;
 	this->_flag_generators[NIKinect2::NI2_G_DEPTH] = false;
 	this->_flag_generators[NIKinect2::NI2_G_COLOR] = false;
 	this->_flag_generators[NIKinect2::NI2_G_IR] = false;
 	this->_flag_generators[NIKinect2::NI2_G_USER] = false;
+	this->_flag_generators[NIKinect2::NI2_G_GESTURES] = false;
 
 	this->_device = new openni::Device();
 
@@ -33,10 +38,10 @@ NIKinect2::NIKinect2(){
 	this->_g_color = new openni::VideoStream();
 	this->_g_ir    = new openni::VideoStream();
 
-	NIKinect2::_ni2_g_streams[NIKinect2::_ni2_n_streams + 0] = this->_g_depth;
-	NIKinect2::_ni2_g_streams[NIKinect2::_ni2_n_streams + 1] = this->_g_color;
-	NIKinect2::_ni2_g_streams[NIKinect2::_ni2_n_streams + 2] = this->_g_ir;
-	NIKinect2::_ni2_n_streams += 3;
+	//NIKinect2::_ni2_g_streams[NIKinect2::_ni2_n_streams + 0] = this->_g_color;
+	//NIKinect2::_ni2_g_streams[NIKinect2::_ni2_n_streams + 1] = this->_g_depth;
+	//NIKinect2::_ni2_g_streams[NIKinect2::_ni2_n_streams + 2] = this->_g_ir;
+	//NIKinect2::_ni2_n_streams += 3;
 
 	this->_frame_depth = new openni::VideoFrameRef();
 	this->_frame_color = new openni::VideoFrameRef();
@@ -45,11 +50,16 @@ NIKinect2::NIKinect2(){
 	this->_nite_user_tracker = new nite::UserTracker();
 	this->_nite_user_tracker_frame = new nite::UserTrackerFrameRef();
 	this->_nite_skeleton_states = (nite::SkeletonState*)malloc(sizeof(nite::SkeletonState) * _max_users);//new nite::SkeletonState();
-	for(int i = 0 ; i < NIKinect2::_max_users ; ++i)
+
+	for(int i = 0 ; i < NIKinect2::_max_users ; ++i){
 		this->_nite_skeleton_states[i] = nite::SKELETON_NONE;
+	}
 
 	this->_users = new std::vector<nite::UserData*>();
 	this->_users_ids = new std::vector<int>();
+
+	this->_nite_hand_tracker = new nite::HandTracker();
+	this->_nite_hand_tracker_frame = new nite::HandTrackerFrameRef();
 
 	this->_last_tick = 0;
 	this->_frame_counter = 0;
@@ -74,10 +84,10 @@ NIKinect2::NIKinect2(){
 NIKinect2::~NIKinect2(){
 	this->disable_user_generator();
 	//nite::NiTE::shutdown();
-
+	this->disable_ir_generator();
 	this->disable_depth_generator();
 	this->disable_color_generator();
-	this->disable_ir_generator();
+	
 	//openni::OpenNI::shutdown();
 }
 
@@ -133,6 +143,12 @@ bool NIKinect2::ni_update(){
  * @details	ni_shutdown.
  */
 void NIKinect2::ni_shutdown(){
+	for(int i = 0 ; i < NIKinect2::_ni2_n_streams ; ++i){
+		if(NIKinect2::_ni2_g_streams[i]){
+			NIKinect2::_ni2_g_streams[i]->stop();
+			NIKinect2::_ni2_g_streams[i]->destroy();
+		}
+	}
 	nite::NiTE::shutdown();
 	
 	openni::OpenNI::shutdown();
@@ -254,6 +270,9 @@ bool NIKinect2::set_color_hd(bool enable){
 bool NIKinect2::enable_depth_generator(){
 	if(this->_flag_generators[NIKinect2::NI2_G_DEPTH]) return true;
 
+	NIKinect2::_ni2_g_streams[NIKinect2::_ni2_n_streams + 0] = this->_g_depth;
+	NIKinect2::_ni2_n_streams ++;
+
 	openni::Status rc = this->_g_depth->create(*this->_device, openni::SENSOR_DEPTH);
 
 	if (rc == openni::STATUS_OK)	{
@@ -294,6 +313,9 @@ bool NIKinect2::enable_depth_generator(){
  */
 bool NIKinect2::enable_color_generator(){
 	if(this->_flag_generators[NIKinect2::NI2_G_COLOR]) return true;
+
+	NIKinect2::_ni2_g_streams[NIKinect2::_ni2_n_streams + 0] = this->_g_color ;
+	NIKinect2::_ni2_n_streams ++;
 
 	openni::Status rc = this->_g_color->create(*this->_device, openni::SENSOR_COLOR);
 
@@ -336,7 +358,10 @@ bool NIKinect2::enable_color_generator(){
 bool NIKinect2::enable_ir_generator(){
 	if(this->_flag_generators[NIKinect2::NI2_G_IR]) return true;
 
-	openni::Status rc = this->_g_color->create(*this->_device, openni::SENSOR_IR);
+	NIKinect2::_ni2_g_streams[NIKinect2::_ni2_n_streams] = this->_g_ir;
+	NIKinect2::_ni2_n_streams++;
+
+	openni::Status rc = this->_g_ir->create(*this->_device, openni::SENSOR_IR);
 
 	if (rc == openni::STATUS_OK)	{
 		rc = this->_g_ir->start();
@@ -381,6 +406,30 @@ bool NIKinect2::enable_user_generator(){
 	}
 
 	return this->_flag_generators[NIKinect2::NI2_G_USER];
+}
+
+/**
+ * @brief	enable_hand_tracker.
+ * @details	enable_hand_tracker.
+ */
+bool NIKinect2::enable_hand_tracker(){
+	if(this->_flag_generators[NIKinect2::NI2_G_GESTURES]) return true;
+
+	nite::Status status = nite::STATUS_OK;
+
+	status = this->_nite_hand_tracker->create(this->_device);
+
+	if(status != nite::STATUS_OK){
+		NI2_PRINT_ERROR("enable_hand_tracker","Couldn't create HandTracker.");
+	}
+	else{
+		this->_nite_hand_tracker->startGestureDetection(nite::GESTURE_CLICK);
+		this->_nite_hand_tracker->startGestureDetection(nite::GESTURE_WAVE);
+
+		this->_flag_generators[NIKinect2::NI2_G_GESTURES] = true;
+	}
+
+	return this->_flag_generators[NIKinect2::NI2_G_GESTURES];
 }
 
 /**
@@ -456,6 +505,26 @@ bool NIKinect2::disable_user_generator(){
 	return true;
 }
 
+/**
+ * @brief	disable_hand_tracker.
+ * @details	disable_hand_tracker.
+ */
+bool NIKinect2::disable_hand_tracker(){
+	if(!this->_flag_generators[NIKinect2::NI2_G_GESTURES]) 
+		return true;
+
+	
+	//this->_nite_user_tracker->stopPoseDetection();
+	//this->_nite_user_tracker->stopSkeletonTracking();
+
+	this->_nite_hand_tracker_frame->release();
+	this->_nite_hand_tracker->destroy();
+
+	this->_flag_generators[NIKinect2::NI2_G_GESTURES] = false;
+
+	return true;
+}
+
 //-----------------------------------------------------------------------------
 // UPDATE
 //-----------------------------------------------------------------------------
@@ -484,7 +553,7 @@ bool NIKinect2::update(){
 		this->_last_tick = current_tick;
 		this->_frame_counter = 0;
 
-		printf("FrameRate: %.2f\n",this->_frame_rate);
+		printf("FrameRateNI: %.2f\n",this->_frame_rate);
 	}
 
 	return result;
@@ -497,9 +566,14 @@ bool NIKinect2::update(){
 bool NIKinect2::update_images(){
 	openni::Status rc = openni::STATUS_OK;
 
+	//printf("Up.");
+	//int temp;
+	//openni::OpenNI::waitForAnyStream(NIKinect2::_ni2_g_streams,NIKinect2::_ni2_active_streams,&temp);
+	//printf("..dated");
 	if(this->_flag_generators[NIKinect2::NI2_G_DEPTH]){
+		//printf(" read ");
 		rc = this->_g_depth->readFrame(this->_frame_depth);
-
+		//printf("depth ");
 		if(rc != openni::STATUS_OK){
 			NI2_PRINT_ERROR("update_images","Error retrieving depth image.");
 			return false;
@@ -512,9 +586,11 @@ bool NIKinect2::update_images(){
 		cv::inRange(this->_depth_mat_16,1,10000,this->_mask_mat);
 	}
 
+	//openni::OpenNI::waitForAnyStream(NIKinect2::_ni2_g_streams,NIKinect2::_ni2_active_streams,&temp);
 	if(this->_flag_generators[NIKinect2::NI2_G_COLOR]){
+		//printf(" read ");
 		rc = this->_g_color->readFrame(this->_frame_color);
-
+		//printf(" color ");
 		if(rc != openni::STATUS_OK){
 			NI2_PRINT_ERROR("update_images","Error retrieving color image.");
 			return false;
@@ -524,17 +600,17 @@ bool NIKinect2::update_images(){
 		cv::cvtColor(color_temp,this->_color_mat,CV_RGB2BGR);
 	}
 
-	//if(this->_flag_generators[NIKinect2::NI2_G_IR]){
-	//	rc = this->_g_ir->readFrame(this->_frame_ir);
+	if(this->_flag_generators[NIKinect2::NI2_G_IR]){
+		rc = this->_g_ir->readFrame(this->_frame_ir);
 
-	//	if(rc != openni::STATUS_OK){
-	//		NI2_PRINT_ERROR("update_images","Error retrieving IR image.");
-	//	}
+		if(rc != openni::STATUS_OK){
+			NI2_PRINT_ERROR("update_images","Error retrieving IR image.");
+		}
 
-	//	cv::Mat color_temp(this->_image_y,this->_image_x,CV_8UC3,(void*)this->_frame_ir->getData());
-	//	cv::cvtColor(color_temp,this->_color_mat,CV_RGB2BGR);
-	//}
-	
+		cv::Mat ir_raw(this->_frame_ir->getHeight(),this->_frame_ir->getWidth(),CV_8UC1,(void*)this->_frame_ir->getData());
+		ir_raw.copyTo(this->_ir_mat);
+	}
+	//printf(" END\n");
 	return true;
 }
 
@@ -556,15 +632,72 @@ bool NIKinect2::update_nite(){
 	const nite::Array<nite::UserData>& users = this->_nite_user_tracker_frame->getUsers();
 
 	for(int i = 0 ; i < users.getSize() ; ++i){
-		if(users[i].isVisible()){
+		//if(users[i].isVisible()){
+			if(users[i].isNew()){
+				this->_nite_user_tracker->startSkeletonTracking(users[i].getId());
+				//printf("start tracking skeleton\n");
+			}
+
 			this->_users->push_back(new nite::UserData(users[i]));
 
 			this->_users_ids->push_back(users[i].getId());
-		}
+		//}
 	}
 
 	//printf("NUsers %d\n",this->_nite_user_tracker_frame->getUsers().getSize());
 	this->_nite_user_map = (const nite::UserMap&)this->_nite_user_tracker_frame->getUserMap();
+
+	if(this->_flag_generators[NIKinect2::NI2_G_GESTURES]){
+		rc_nite = this->_nite_hand_tracker->readFrame(this->_nite_hand_tracker_frame);
+
+		if (rc_nite != nite::STATUS_OK){
+			NI2_PRINT_ERROR("update_nite","Hand Tracker update failed.");
+			return false;
+		}
+
+		//Get gestures from NiTE
+		const nite::Array<nite::GestureData>& gestures = this->_nite_hand_tracker_frame->getGestures();
+
+		for(int i = 0; i < gestures.getSize(); ++i){
+			if(gestures[i].isComplete()){
+				printf("Gesture Complete\n");
+
+				const nite::Point3f& position = gestures[i].getCurrentPosition();
+				
+				//Start hand tracker
+				this->_nite_hand_tracker->startHandTracking(gestures[i].getCurrentPosition(), &this->_nite_hand_id);
+
+				printf("Gesture %d at (%f,%f,%f) ID(%d)\n", gestures[i].getType(), position.x, position.y, position.z,this->_nite_hand_id);
+			}
+			if(gestures[i].isInProgress()){
+				printf("Gesture In Progress\n");
+			}
+		}
+
+		//Track hand and update position from NiTE
+		const nite::Array<nite::HandData>& hands= this->_nite_hand_tracker_frame->getHands();
+
+		printf("N hands (%d)",hands.getSize());
+		for(int i = 0; i < hands.getSize(); ++i){
+			const nite::HandData& hand_data = hands[i];
+
+			printf(" - %d",hand_data.getId());
+
+			if(hand_data.isTracking()){
+				this->convert_3d_to_depth(	hand_data.getPosition().x,
+											hand_data.getPosition().y,
+											hand_data.getPosition().z,
+											&this->xx[i],&this->yy[i],&this->zz[i]);
+
+				//this->_nite_hand_tracker->convertDepthCoordinatesToHand(hand_data.getPosition().x,
+				//														hand_data.getPosition().y,
+				//														hand_data.getPosition().z,
+				//														&this->xx,&this->yy);
+				
+			}
+		}	
+		printf("\n");
+	}
 
 	return true;
 }
@@ -644,6 +777,26 @@ bool NIKinect2::get_depth_8(cv::Mat &depth){
 	}
 }
 
+/**
+ * @brief	Gets a copy of the IR cv::Mat.
+ * @details	Gets a copy of the IR cv::Mat, if the IR Generator 
+ *			(_ir_generator) is active.
+ *
+ * @param[out]	ir
+ *				Copy of the IR cv::Mat.
+ *
+ * @retval	true if the cv::Mat was successfully copied.
+ * @retval	false if the generator is not active or some other error occurred.
+ */
+bool NIKinect2::get_ir(cv::Mat &ir){
+	if(this->_flag_generators[NIKinect2::NI2_G_IR]){
+		this->_ir_mat.copyTo(ir);
+		return true;
+	}
+	else{
+		return false;
+	}
+}
 /**
  * @brief	Gets a copy of the Mask cv::Mat.
  * @details	Gets a copy of the Mask cv::Mat, if the Depth Generator 
@@ -750,7 +903,7 @@ bool NIKinect2::get_user_data(int idx, nite::UserData& data){
 		return false;
 
 	data = *(new nite::UserData(*this->_users->at(idx)));
-	
+
 	return true;
 }
 
@@ -765,6 +918,16 @@ bool NIKinect2::get_user_mask(int idx, cv::Mat &mask){
 
 		return true;
 	}
+	return false;
+}
+
+/**
+ * @brief	is_color_hd.
+ * @details	is_color_hd.
+ */
+bool NIKinect2::is_color_hd(){
+	if(this->_mode_color.getResolutionX() == 1280)
+		return true;
 	return false;
 }
 
@@ -905,4 +1068,13 @@ bool NIKinect2::get_floor_mask(cv::Mat &out_mask, double thresh){
 			}
 		}
 	}
+}
+
+
+bool NIKinect2::convert_depth_to_3d(float in_xx, float in_yy, float in_zz, float *out_xx, float *out_yy, float *out_zz){
+	return openni::STATUS_OK == openni::CoordinateConverter::convertDepthToWorld(*this->_g_depth,in_xx,in_yy,in_zz,out_xx,out_yy,out_zz);
+}
+
+bool NIKinect2::convert_3d_to_depth(float in_xx, float in_yy, float in_zz, float *out_xx, float *out_yy, float *out_zz){
+	return openni::STATUS_OK == openni::CoordinateConverter::convertWorldToDepth(*this->_g_depth,in_xx,in_yy,in_zz,out_xx,out_yy,out_zz);
 }

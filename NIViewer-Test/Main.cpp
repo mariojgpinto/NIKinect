@@ -1,15 +1,154 @@
 
 #include <NIKinect.h>
+#include <NIKinect2.h>
 //#include <NIThreadedKinect.h>
 
 int main_ni_threaded_kinect(int argc, char* argv[]);
 int main_ni_kinect(int argc, char* argv[]);
 int main_multi_ni_kinect(int argc, char* argv[]);
+int main_ni_kinect2(int argc, char* argv[]);
 
 int main(int argc, char* argv[]){
 	//main_ni_threaded_kinect(argc, argv);
 	//main_ni_kinect(argc, argv);
-	main_multi_ni_kinect(argc, argv);
+	//main_multi_ni_kinect(argc, argv);
+	main_ni_kinect2(argc, argv);
+
+	return 0;
+}
+
+
+int main_ni_kinect2(int argc, char* argv[]){
+
+	//{
+	//	openni::Device device;        // Software object for the physical device i.e. 
+ //                                         // PrimeSense Device Class
+ //       openni::VideoStream ir;       // IR VideoStream Class Object
+ //       openni::VideoFrameRef irf;    //IR VideoFrame Class Object
+ //       openni::VideoMode vmode;      // VideoMode Object
+ //       openni::Status rc = openni::STATUS_OK;
+
+ //       rc = openni::OpenNI::initialize();    // Initialize OpenNI
+ //       rc = device.open(openni::ANY_DEVICE); // Open the Device
+ //       rc = ir.create(device, openni::SENSOR_IR);    // Create the VideoStream for IR
+ //       rc = ir.start();                      // Start the IR VideoStream
+
+ //       cv::Mat frame, raw;                                // OpenCV Matrix Object, also used to store images
+ //       int h, w;                                // Height and Width of the IR VideoFrame
+
+ //       while(true)                                // Crux of this project
+ //       {
+ //               if(device.getSensorInfo(openni::SENSOR_IR) != NULL)
+ //               {
+ //                       rc = ir.readFrame(&irf);                // Read one IR VideoFrame at a time
+ //                       if(irf.isValid())                                // If the IR VideoFrame is valid
+ //                       {
+ //                               vmode = ir.getVideoMode();  // Get the IR VideoMode Info for this video stream. 
+ //                               
+	//							
+	//							// This includes its resolution, fps and stream format.
+	//							cv::Mat ir_raw(irf.getHeight(),irf.getWidth(),CV_8UC1,(void*)irf.getData());
+	//							////ir_raw.convertTo(frame, CV_8UC1);
+ //       //                        const uchar* imgBuf = (const uchar*)irf.getData(); 
+ //       //                                                                            // PrimeSense gives the IR stream as 16-bit data output
+ //       //                        h=irf.getHeight(); 
+ //       //                        w=irf.getWidth();
+	//							//raw.create(h, w, CV_16UC1); // Create the OpenCV Mat Matrix Class Object 
+ //       //                                                                                // to receive the IR VideoFrames
+ //       //                        memcpy(raw.data, imgBuf, h*w*sizeof(uchar)); 
+ //                                                                                       // Copy the ir data from memory imgbuf -> frame.data 
+ //                                                                                       // using memcpy (a string.h) function
+ //                               //raw.convertTo(frame, CV_8UC1); 
+ //                                                                                       // OpenCV displays 8-bit data (I'm not sure why?) 
+ //                                                                                       // So, convert from 16-bit to 8-bit
+ //                               //namedWindow("ir", 1);                // Create a named window
+ //                               cv::imshow("ir", ir_raw);                // Show the IR VideoFrame in this window
+ //                               char key = cv::waitKey(10);
+ //                               if(key==27) break;                        // Escape key number
+ //                       }
+ //               }
+ //       }
+ //       //--------Safe closing--------//
+ //       ir.stop();                                                                // Stop the IR VideoStream
+ //       ir.destroy();
+ //       device.close();                                                        // Close the PrimeSense Device
+	//}
+	//return 0;
+
+
+	int hd = 0;
+
+	if(!NIKinect2::ni_initialize())
+		return false;
+
+	NIKinect2* kinect = new NIKinect2();
+
+	bool result = false;
+
+	if(argc == 2){
+		result = kinect->initialize(argv[1]);
+	}
+	else{
+		result = kinect->initialize();
+	}
+
+	if(result){
+		
+		
+		kinect->enable_color_generator();
+		kinect->enable_depth_generator();
+		//kinect->enable_ir_generator();
+		//kinect->enable_user_generator();
+		//kinect->enable_hand_tracker();
+
+		//kinect->set_color_hd(hd);
+
+		//kinect->set_depth_color_registration(true);
+
+		
+	}	
+	else{
+		return false;
+	}
+
+	cv::Mat color;
+	cv::Mat depth;
+	cv::Mat ir;
+
+	char c = 0;
+	while((c = cv::waitKey(31)) != 27){
+		if(!NIKinect2::ni_update())
+			break;
+		//printf("Up..");
+		if(!kinect->update())
+			break;
+		//printf(" .dated");
+
+		if(kinect->get_color(color)){
+			//cv::circle(color,cv::Point((int)kinect->xx[0],(int)kinect->yy[0]),5,cv::Scalar(0,0,255),-1);
+			//cv::circle(color,cv::Point((int)kinect->xx[1],(int)kinect->yy[1]),5,cv::Scalar(0,255,0),-1);
+			imshow("Color",color);
+		}
+		//printf(" color.. ");
+		if(kinect->get_depth_8(depth)){
+			imshow("Depth",depth);
+		}
+		//printf("depth.. ");
+
+		if(kinect->get_ir(ir)){
+			imshow("IR",ir);
+		}
+		//printf("ir.. ");
+
+		//printf("Frame Rate: %.2f\n",kinect->get_frame_rate());
+		if(c == ' '){
+			kinect->~NIKinect2();
+			NIKinect2::ni_shutdown();
+			break;
+		}
+
+		//printf("END\n");
+	}
 
 	return 0;
 }
