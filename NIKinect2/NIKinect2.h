@@ -34,13 +34,24 @@
  *			- Add Color Depth
  *			- Add ID
  **/
-class __declspec(dllexport)NIKinect2{
+class __declspec(dllexport)NIKinect2: public openni::VideoStream::NewFrameListener{
 	friend class NIKinect2Manager;
 
 	public:
+	void onNewFrame(openni::VideoStream& stream)
+		{
+			stream.readFrame(&m_frame);
+
+			//printf("FrameListener\n");
+			analyzeFrame(m_frame);
+		}
+	private:
+		openni::VideoFrameRef m_frame;
+
+	public:
 		enum GENERATORS{
-			NI2_G_DEPTH = 0,
-			NI2_G_COLOR = 1,
+			NI2_G_DEPTH = 1,
+			NI2_G_COLOR = 0,
 			NI2_G_IR = 2,
 			NI2_G_USER = 3,
 			NI2_G_GESTURES = 4
@@ -77,6 +88,7 @@ class __declspec(dllexport)NIKinect2{
 
 		bool update();
 		bool update_images();
+		void analyzeFrame(const openni::VideoFrameRef& frame);
 		bool update_nite();
 
 		bool get_depth_16(cv::Mat &depth);

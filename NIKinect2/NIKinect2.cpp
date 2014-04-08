@@ -149,6 +149,10 @@ void NIKinect2::ni_shutdown(){
 			NIKinect2::_ni2_g_streams[i]->destroy();
 		}
 	}
+	NIKinect2::_ni2_n_streams = 0;
+	NIKinect2::_ni2_active_streams = 0;
+	NIKinect2::_ni2_initialized = false;
+
 	nite::NiTE::shutdown();
 	
 	openni::OpenNI::shutdown();
@@ -189,7 +193,7 @@ bool NIKinect2::initialize(char* uri){
 	openni::Status rc = this->_device->open(deviceURI);
 
 	if(rc != openni::STATUS_OK){
-		NI2_PRINT_ERROR("initialize","Error openning device");
+		NI2_PRINT_ERROR("initialize","Error openning device (%s)", deviceURI);
 		return false;
 	}
 
@@ -346,6 +350,11 @@ bool NIKinect2::enable_color_generator(){
 	}
 	else{
 		NI2_PRINT_ERROR("enable_color_generator","Couldn't find Color Stream.");
+	}
+
+	if(this->_flag_generators[NIKinect2::NI2_G_COLOR]){
+		rc = this->_g_color->addNewFrameListener(this);
+		printf("AddFrameListener\n");
 	}
 
 	return this->_flag_generators[NIKinect2::NI2_G_COLOR];
@@ -570,48 +579,68 @@ bool NIKinect2::update_images(){
 	//int temp;
 	//openni::OpenNI::waitForAnyStream(NIKinect2::_ni2_g_streams,NIKinect2::_ni2_active_streams,&temp);
 	//printf("..dated");
-	if(this->_flag_generators[NIKinect2::NI2_G_DEPTH]){
-		//printf(" read ");
-		rc = this->_g_depth->readFrame(this->_frame_depth);
-		//printf("depth ");
-		if(rc != openni::STATUS_OK){
-			NI2_PRINT_ERROR("update_images","Error retrieving depth image.");
-			return false;
-		}
+	//if(this->_flag_generators[NIKinect2::NI2_G_DEPTH]){
+	//	//printf(" read ");
+	//	rc = this->_g_depth->readFrame(this->_frame_depth);
+	//	//printf("depth ");
+	//	if(rc != openni::STATUS_OK){
+	//		NI2_PRINT_ERROR("update_images","Error retrieving depth image.");
+	//		return false;
+	//	}
 
-		cv::Mat depthMat16UC1(this->_mode_depth.getResolutionY(),this->_mode_depth.getResolutionX(),CV_16UC1,(void*)this->_frame_depth->getData());
-		depthMat16UC1.copyTo(this->_depth_mat_16);
-		depthMat16UC1.convertTo(this->_depth_mat_8, CV_8UC1,0.05);
+	//	cv::Mat depthMat16UC1(this->_mode_depth.getResolutionY(),this->_mode_depth.getResolutionX(),CV_16UC1,(void*)this->_frame_depth->getData());
+	//	depthMat16UC1.copyTo(this->_depth_mat_16);
+	//	depthMat16UC1.convertTo(this->_depth_mat_8, CV_8UC1,0.05);
 
-		cv::inRange(this->_depth_mat_16,1,10000,this->_mask_mat);
-	}
+	//	cv::inRange(this->_depth_mat_16,1,10000,this->_mask_mat);
+	//}
 
-	//openni::OpenNI::waitForAnyStream(NIKinect2::_ni2_g_streams,NIKinect2::_ni2_active_streams,&temp);
+	////ni_update();
+	////openni::OpenNI::waitForAnyStream(NIKinect2::_ni2_g_streams,NIKinect2::_ni2_active_streams,&temp);
+	////if(this->_flag_generators[NIKinect2::NI2_G_COLOR]){
+	////	//printf(" read ");
+	////	rc = this->_g_color->readFrame(this->_frame_color);
+	////	//printf(" color ");
+	////	if(rc != openni::STATUS_OK){
+	////		NI2_PRINT_ERROR("update_images","Error retrieving color image.");
+	////		return false;
+	////	}
+
+	////	cv::Mat color_temp(this->_mode_color.getResolutionY(),this->_mode_color.getResolutionX(),CV_8UC3,(void*)this->_frame_color->getData());
+	////	cv::cvtColor(color_temp,this->_color_mat,CV_RGB2BGR);
+	////}
+
+	//if(this->_flag_generators[NIKinect2::NI2_G_IR]){
+	//	rc = this->_g_ir->readFrame(this->_frame_ir);
+
+	//	if(rc != openni::STATUS_OK){
+	//		NI2_PRINT_ERROR("update_images","Error retrieving IR image.");
+	//	}
+
+	//	cv::Mat ir_raw(this->_frame_ir->getHeight(),this->_frame_ir->getWidth(),CV_8UC1,(void*)this->_frame_ir->getData());
+	//	ir_raw.copyTo(this->_ir_mat);
+	//}
+	//printf(" END\n");
+	return true;
+}
+
+void NIKinect2::analyzeFrame(const openni::VideoFrameRef& frame){
+	openni::Status rc = openni::STATUS_OK;
+
 	if(this->_flag_generators[NIKinect2::NI2_G_COLOR]){
 		//printf(" read ");
-		rc = this->_g_color->readFrame(this->_frame_color);
+		//rc = frame.readFrame(this->_frame_color);
 		//printf(" color ");
 		if(rc != openni::STATUS_OK){
 			NI2_PRINT_ERROR("update_images","Error retrieving color image.");
-			return false;
+			return;
 		}
 
-		cv::Mat color_temp(this->_mode_color.getResolutionY(),this->_mode_color.getResolutionX(),CV_8UC3,(void*)this->_frame_color->getData());
+		cv::Mat color_temp(this->_mode_color.getResolutionY(),this->_mode_color.getResolutionX(),CV_8UC3,(void*)frame.getData());
 		cv::cvtColor(color_temp,this->_color_mat,CV_RGB2BGR);
+
+		printf("Analyze Frame\n");
 	}
-
-	if(this->_flag_generators[NIKinect2::NI2_G_IR]){
-		rc = this->_g_ir->readFrame(this->_frame_ir);
-
-		if(rc != openni::STATUS_OK){
-			NI2_PRINT_ERROR("update_images","Error retrieving IR image.");
-		}
-
-		cv::Mat ir_raw(this->_frame_ir->getHeight(),this->_frame_ir->getWidth(),CV_8UC1,(void*)this->_frame_ir->getData());
-		ir_raw.copyTo(this->_ir_mat);
-	}
-	//printf(" END\n");
-	return true;
 }
 
 /**
@@ -831,6 +860,9 @@ bool NIKinect2::get_mask(cv::Mat &mask){
  */
 bool NIKinect2::get_color(cv::Mat &color){
 	if(this->_flag_generators[NIKinect2::NI2_G_COLOR]){
+		if(!this->_color_mat.rows)
+			return false;
+
 		this->_color_mat.copyTo(color);
 		return true;
 	}

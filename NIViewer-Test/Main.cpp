@@ -76,8 +76,10 @@ int main_ni_kinect2(int argc, char* argv[]){
 	//return 0;
 
 
-	int hd = 0;
+	int hd = 1;
 
+	start:
+	
 	if(!NIKinect2::ni_initialize())
 		return false;
 
@@ -96,7 +98,7 @@ int main_ni_kinect2(int argc, char* argv[]){
 		
 		
 		kinect->enable_color_generator();
-		kinect->enable_depth_generator();
+		//kinect->enable_depth_generator();
 		//kinect->enable_ir_generator();
 		//kinect->enable_user_generator();
 		//kinect->enable_hand_tracker();
@@ -149,6 +151,11 @@ int main_ni_kinect2(int argc, char* argv[]){
 
 		//printf("END\n");
 	}
+
+	kinect->~NIKinect2();
+	NIKinect2::ni_shutdown();
+
+	goto start;
 
 	return 0;
 }
